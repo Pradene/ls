@@ -4,9 +4,9 @@ int main(int ac, char **av) {
     int result = 0;
     
     if (ac == 1) {
-        result = ls(".", ALL | TIME);
+        result = ls(".", ALL);
     } else {
-        result = ls(av[1], NONE);    
+        result = ls(av[1], NONE);
     }
 
     return (result);

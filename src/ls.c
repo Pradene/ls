@@ -62,7 +62,14 @@ char    *permissions(struct stat *st) {
 }
 
 int compare_name(const void *a, const void *b) {
-    return ft_strcmp((*(t_file **)a)->name, (*(t_file **)b)->name);
+    char    *str1 = (*(const t_file **)a)->name;
+    char    *str2 = (*(const t_file **)b)->name;
+
+    // Skip leading dots if present
+    for (int i = 0; str1[i] == '.'; i++) str1++;
+    for (int i = 0; str2[i] == '.'; i++) str2++;
+
+    return ft_strcmp(ft_strtolower(str1), ft_strtolower(str2));
 }
 
 int compare_time(const void *a, const void *b) {
@@ -137,7 +144,7 @@ int ls(char *path, Options opts) {
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
 
         struct stat st;
-        if (stat(full_path, &st) == 0) {
+        if (lstat(full_path, &st) == 0) {
             t_file *new_file = malloc(sizeof(t_file));
             new_file->name = ft_strdup(entry->d_name);
             new_file->stat = st;
@@ -149,7 +156,7 @@ int ls(char *path, Options opts) {
                 file_list = insert_sorted(file_list, new_file, compare_name);
             }
             
-            total += st.st_blocks;
+            total += st.st_blocks / 2;
         }
     }
 
@@ -158,7 +165,7 @@ int ls(char *path, Options opts) {
     // Recursion for directories if RECURSE is set
     if (opts & RECURSE) {
         printf("%s:\n", path);
-        printf("total %lu\n", total / 2);
+        printf("total %lu\n", total);
         print_list(file_list);
         printf("\n");
 
@@ -173,14 +180,12 @@ int ls(char *path, Options opts) {
             temp = temp->next;
         }
 
-        ft_lstclear(&file_list, free_file);
-
     } else {
-        printf("total %lu\n", total / 2);
+        printf("total %lu\n", total);
         print_list(file_list);
-
-        ft_lstclear(&file_list, free_file);
     }
+    
+    ft_lstclear(&file_list, free_file);
 
     return (0);
 }
