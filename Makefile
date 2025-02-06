@@ -18,6 +18,12 @@ LIBFT = libft.a
 # Executable name
 NAME = ls
 
+all: $(NAME)
+
+# Build Libft if not compiled
+$(LIBFT):
+	$(MAKE) -C $(LIBFT_DIR) all
+
 # Ensure obj directory exists
 $(OBJ_DIR):
 	mkdir -p $@
@@ -29,12 +35,6 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 # Compile the program
 $(NAME): $(LIBFT) $(OBJS)
 	$(CC) $(OBJS) $(LIBFT_DIR)/$(LIBFT) -o $(NAME)
-
-# Build Libft if not compiled
-$(LIBFT):
-	$(MAKE) -C $(LIBFT_DIR) all
-
-all: $(NAME)
 
 clean:
 	rm -rf $(OBJ_DIR)
