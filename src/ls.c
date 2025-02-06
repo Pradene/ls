@@ -1,6 +1,40 @@
 #include "ls.h"
 #include "libft.h"
 
+// static int  permissions_width = 0;
+static int  blocks_size_width = 0;
+static int  file_size_width = 0;
+static int  group_width = 0;
+static int  user_width = 0;
+
+int int_len(int n) {
+    int i = 1;
+    while ((n = n / 10) != 0) {
+        i++;
+    }
+
+    return i;
+}
+
+char    *colored_name(const t_file *file) {
+    const char *color = RESET;
+    if (S_ISDIR(file->stat.st_mode))        color = BLUE;
+    else if (S_ISFIFO(file->stat.st_mode))  color = CYAN;
+    else if (S_ISLNK(file->stat.st_mode))   color = CYAN;
+    else if (file->stat.st_mode & S_IXUSR)  color = GREEN;
+
+    // Allocate memory for colored string (color + filename + reset + null terminator)
+    size_t len = snprintf(NULL, 0, "%s%s%s", color, file->name, RESET) + 1;
+    char *colored_str = malloc(len);
+    if (!colored_str) {
+        perror("malloc");
+        return NULL;
+    }
+
+    snprintf(colored_str, len, "%s%s%s", color, file->name, RESET);
+    return colored_str;
+}
+
 char    *date(const time_t *timestamp) {
     char    *date = "";
 
@@ -28,34 +62,37 @@ char    *date(const time_t *timestamp) {
     return date;
 }
 
-char    *permissions(struct stat *st) {
-    char perms[11];
+char    *permissions(t_file *file) {
+    char        perms[12];
+    struct stat st = file->stat;
 
-    if (S_ISDIR(st->st_mode))       perms[0] = 'd';
-    else if (S_ISCHR(st->st_mode))  perms[0] = 'c';
-    else if (S_ISBLK(st->st_mode))  perms[0] = 'b';
-    else if (S_ISFIFO(st->st_mode)) perms[0] = 'p';
-    else if (S_ISLNK(st->st_mode))  perms[0] = 'l';
-    else if (S_ISSOCK(st->st_mode)) perms[0] = 's';
+    if (S_ISDIR(st.st_mode))       perms[0] = 'd';
+    else if (S_ISCHR(st.st_mode))  perms[0] = 'c';
+    else if (S_ISBLK(st.st_mode))  perms[0] = 'b';
+    else if (S_ISFIFO(st.st_mode)) perms[0] = 'p';
+    else if (S_ISLNK(st.st_mode))  perms[0] = 'l';
+    else if (S_ISSOCK(st.st_mode)) perms[0] = 's';
     else                            perms[0] = '-';
 
-    perms[1] = (st->st_mode & S_IRUSR) ? 'r' : '-';
-    perms[2] = (st->st_mode & S_IWUSR) ? 'w' : '-';
-    perms[3] = (st->st_mode & S_IXUSR) ? 
-        ((st->st_mode & S_ISUID) ? 's' : 'x') : 
-        ((st->st_mode & S_ISUID) ? 'S' : '-');
+    perms[1] = (st.st_mode & S_IRUSR) ? 'r' : '-';
+    perms[2] = (st.st_mode & S_IWUSR) ? 'w' : '-';
+    perms[3] = (st.st_mode & S_IXUSR) ? 
+        ((st.st_mode & S_ISUID) ? 's' : 'x') : 
+        ((st.st_mode & S_ISUID) ? 'S' : '-');
 
-    perms[4] = (st->st_mode & S_IRGRP) ? 'r' : '-';
-    perms[5] = (st->st_mode & S_IWGRP) ? 'w' : '-';
-    perms[6] = (st->st_mode & S_IXGRP) ? 
-        ((st->st_mode & S_ISGID) ? 's' : 'x') : 
-        ((st->st_mode & S_ISGID) ? 'S' : '-');
+    perms[4] = (st.st_mode & S_IRGRP) ? 'r' : '-';
+    perms[5] = (st.st_mode & S_IWGRP) ? 'w' : '-';
+    perms[6] = (st.st_mode & S_IXGRP) ? 
+        ((st.st_mode & S_ISGID) ? 's' : 'x') : 
+        ((st.st_mode & S_ISGID) ? 'S' : '-');
 
-    perms[7] = (st->st_mode & S_IROTH) ? 'r' : '-';
-    perms[8] = (st->st_mode & S_IWOTH) ? 'w' : '-';
-    perms[9] = (st->st_mode & S_IXOTH) ? 
-        ((st->st_mode & S_ISVTX) ? 't' : 'x') : 
-        ((st->st_mode & S_ISVTX) ? 'T' : '-');
+    perms[7] = (st.st_mode & S_IROTH) ? 'r' : '-';
+    perms[8] = (st.st_mode & S_IWOTH) ? 'w' : '-';
+    perms[9] = (st.st_mode & S_IXOTH) ? 
+        ((st.st_mode & S_ISVTX) ? 't' : 'x') : 
+        ((st.st_mode & S_ISVTX) ? 'T' : '-');
+    
+    // perms[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : '\0';
     perms[10] = '\0';
 
     return ft_strdup(perms);
@@ -98,17 +135,25 @@ t_list *insert_sorted(t_list *head, t_file *new_file, int (*cmp)(const void *, c
 
 void print_list(t_list *head) {
     t_list *temp = head;
+
     while (temp) {
         t_file *f = (t_file *)temp->content;
-        printf("%s %ld %s %s %lu %s %s\n", \
-            permissions(&f->stat), \
-            f->stat.st_nlink, \
-            getpwuid(f->stat.st_uid)->pw_name, \
-            getgrgid(f->stat.st_gid)->gr_name, \
-            f->stat.st_size, \
+        printf("%s %*ld %-*s %-*s %*lu %s %s", \
+            permissions(f), \
+            blocks_size_width, f->stat.st_nlink, \
+            user_width, getpwuid(f->stat.st_uid)->pw_name, \
+            group_width, getgrgid(f->stat.st_gid)->gr_name, \
+            file_size_width, f->stat.st_size, \
             date(&f->stat.st_mtime), \
-            f->name \
+            colored_name(f) \
         );
+
+        if (f->link_name) {
+            printf(" -> %s", f->link_name);
+        }
+
+        printf("\n");
+
         temp = temp->next;
     }
 }
@@ -147,16 +192,35 @@ int ls(char *path, Options opts) {
         if (lstat(full_path, &st) == 0) {
             t_file *new_file = malloc(sizeof(t_file));
             new_file->name = ft_strdup(entry->d_name);
+            new_file->link_name = NULL;
             new_file->stat = st;
 
             if (opts & TIME) {
                 file_list = insert_sorted(file_list, new_file, compare_time);
-
             } else {
                 file_list = insert_sorted(file_list, new_file, compare_name);
             }
+
+            if (S_ISLNK(st.st_mode)) {
+                char    *link_name = malloc(1024);
+                if (readlink(full_path, link_name, 1024 - 1) == -1) {
+                    printf("Error");
+                }
+
+                new_file->link_name = link_name;
+            }
             
             total += st.st_blocks / 2;
+
+            blocks_size_width = (blocks_size_width > int_len(st.st_blocks)) ? blocks_size_width : int_len(st.st_blocks);
+            file_size_width = (file_size_width > int_len(st.st_size)) ? file_size_width : int_len(st.st_size);
+        
+            char    *user = getpwuid(st.st_uid)->pw_name;
+            char    *group = getgrgid(st.st_gid)->gr_name;
+
+            group_width = (group_width > ft_strlen(group)) ? group_width : ft_strlen(group);
+            user_width = (user_width > ft_strlen(user)) ? user_width : ft_strlen(user);
+        
         }
     }
 

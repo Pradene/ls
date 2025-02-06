@@ -3,17 +3,26 @@
 
 # include <sys/types.h>
 # include <sys/stat.h>
+# include <sys/xattr.h>
+# include <sys/acl.h>
 
 # include <dirent.h>
 # include <stdio.h>
+# include <stdlib.h>
 # include <unistd.h>
 # include <pwd.h>
 # include <grp.h>
 # include <time.h>
 
+# define BLUE  "\x1B[34m"
+# define CYAN  "\x1B[36m"
+# define GREEN "\x1B[32m"
+# define RESET "\x1B[0m"
+
 typedef struct s_file {
-    char           *name;
-    struct stat    stat;
+    char            *link_name;
+    char            *name;
+    struct stat     stat;
 }   t_file;
 
 typedef enum {
