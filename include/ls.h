@@ -2,16 +2,19 @@
 # define DEFINE_LS_H
 
 # include <sys/types.h>
-# include <dirent.h>
-# include <string.h>
-# include <stdio.h>
-# include <sys/types.h>
 # include <sys/stat.h>
+
+# include <dirent.h>
+# include <stdio.h>
 # include <unistd.h>
 # include <pwd.h>
 # include <grp.h>
 # include <time.h>
 
+typedef struct s_file {
+    char           *name;
+    struct stat    stat;
+}   t_file;
 
 typedef enum {
     NONE    = 0,
