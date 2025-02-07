@@ -1,5 +1,4 @@
 #include "ls.h"
-#include "libft.h"
 
 // static int  permissions_width = 0;
 static int  blocks_size_width = 0;
@@ -107,61 +106,6 @@ void permissions(t_file *file, char *buffer) {
 
     // perms[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : '\0';
     buffer[10] = '\0';
-}
-
-// int compare_name(const void *a, const void *b) {
-//     char    *str1 = (*(const t_file **)a)->name;
-//     char    *str2 = (*(const t_file **)b)->name;
-
-//     // Skip leading dots if present
-//     for (int i = 0; str1[i] == '.'; i++) str1++;
-//     for (int i = 0; str2[i] == '.'; i++) str2++;
-
-//     if (*str1 == '\0' && *str2 == '\0') return 0;
-//     else if (*str1 == '\0') return -(*str2);
-//     else if (*str2 == '\0') return (*str1);
-
-//     char    *l1 = ft_strtolower(str1);
-//     char    *l2 = ft_strtolower(str2);
-//     int     result = ft_strcmp(l1, l2);
-    
-//     free(l1);
-//     free(l2);
-
-//     return result;
-// }
-
-int compare_name(const void *a, const void *b) {
-    const t_file *file_a = *(const t_file **)a;
-    const t_file *file_b = *(const t_file **)b;
-    const char *name_a = file_a->name;
-    const char *name_b = file_b->name;
-
-    // For other entries, skip ALL leading dots before comparison
-    const char *str1 = name_a;
-    const char *str2 = name_b;
-
-    while (*str1 == '.') str1++;
-    while (*str2 == '.') str2++;
-
-    // Handle empty strings after skipping dots
-    if (*str1 == '\0' && *str2 == '\0') return 0;
-    if (*str1 == '\0') return -1;
-    if (*str2 == '\0') return 1;
-
-    // Case-insensitive comparison
-    char *l1 = ft_strtolower(str1);
-    char *l2 = ft_strtolower(str2);
-    int result = ft_strcmp(l1, l2);
-    
-    free(l1);
-    free(l2);
-
-    return result;
-}
-
-int compare_time(const void *a, const void *b) {
-    return (*(t_file **)b)->stat.st_mtime - (*(t_file **)a)->stat.st_mtime;
 }
 
 void print_files(t_file **files, size_t count, const char *path, unsigned long total) {
@@ -303,9 +247,9 @@ int ls(char *path, Options opts) {
     }
 
     if (opts & TIME) {
-        quicksort(files, count, sizeof(t_file *), compare_time);
+        quicksort(files, count, sizeof(t_file *), compare_file_mtime);
     } else {
-        quicksort(files, count, sizeof(t_file *), compare_name);
+        quicksort(files, count, sizeof(t_file *), compare_file_name);
     }
 
     closedir(dir);
@@ -322,7 +266,6 @@ int ls(char *path, Options opts) {
                 
                 if (ls(sub_path, opts) == 1) {
                     free_files(files, count);
-                    closedir(dir);
                     exit(1);
                 }
             }

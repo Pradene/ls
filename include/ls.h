@@ -4,7 +4,6 @@
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <sys/xattr.h>
-# include <sys/acl.h>
 
 # include <dirent.h>
 # include <stdio.h>
@@ -14,6 +13,8 @@
 # include <pwd.h>
 # include <grp.h>
 # include <time.h>
+
+# include "libft.h"
 
 # define BLUE  "\x1B[34m"
 # define CYAN  "\x1B[36m"
@@ -38,6 +39,10 @@ typedef enum {
 }   Options;
 
 int ls(char *path, Options opts);
+
 void quicksort(void *base, size_t nmemb, size_t size, int (*comp)(const void *, const void *));
+int compare_name(const void *a, const void *b);
+int compare_file_name(const void *a, const void *b);
+int compare_file_mtime(const void *a, const void *b);
 
 #endif

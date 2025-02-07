@@ -10,7 +10,7 @@ OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRCS))
 
 # Compiler settings
 CC = gcc
-CFLAGS = -Wall -Wextra -Werror -I$(INC_DIR) -I$(LIBFT_DIR)/include -lacl
+CFLAGS = -Wall -Wextra -Werror -I$(INC_DIR) -I$(LIBFT_DIR)/include
 
 # Library
 LIBFT = libft.a
