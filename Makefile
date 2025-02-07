@@ -5,7 +5,7 @@ LIBFT_DIR = libft
 INC_DIR = include
 
 # Source files
-SRCS = main.c ls.c
+SRCS = main.c ls.c sort.c
 OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(SRCS))
 
 # Compiler settings
