@@ -41,6 +41,7 @@ typedef enum {
 int ls(char *path, Options opts);
 
 void quicksort(void *base, size_t nmemb, size_t size, int (*comp)(const void *, const void *));
+
 int compare_name(const void *a, const void *b);
 int compare_file_name(const void *a, const void *b);
 int compare_file_mtime(const void *a, const void *b);

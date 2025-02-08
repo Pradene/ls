@@ -6,6 +6,9 @@ static int  file_size_width = 0;
 static int  group_width = 0;
 static int  user_width = 0;
 
+static Options  options = NONE;
+
+
 int int_len(int n) {
     int i = 1;
     while ((n = n / 10) != 0) {
@@ -113,41 +116,50 @@ void print_files(t_file **files, size_t count, const char *path, unsigned long t
     char    *output_buf = malloc(buf_size);
     size_t  pos = 0;
 
-    if (path) {
-        pos += snprintf(output_buf + pos, buf_size - pos, "%s:\ntotal %lu\n", path, total);
-    } else {
-        pos += snprintf(output_buf + pos, buf_size - pos, "total %lu\n", total);
+    if (options & LIST) {
+        if (options & RECURSE) {
+            pos += snprintf(output_buf + pos, buf_size - pos, "%s:\ntotal %lu\n", path, total);
+
+        } else {
+            pos += snprintf(output_buf + pos, buf_size - pos, "total %lu\n", total);
+        }
     }
 
     for (size_t i = 0; i < count; i++) {
         t_file *f = files[i];
         char d_buf[64], p_buf[12], n_buf[256];
-        const char *link_part = f->link_name ? " -> " : "";
-        const char *link_name = f->link_name ? f->link_name : "";
-
-        // Get data into stack buffers
-        date(&f->stat.st_mtime, d_buf, sizeof(d_buf));
-        permissions(f, p_buf);
         colored_name(f, n_buf, sizeof(n_buf));
 
-        // Calculate line length and resize buffer if needed
-        int line_len = snprintf(NULL, 0, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-            p_buf, blocks_size_width, f->stat.st_nlink,
-            user_width, getpwuid(f->stat.st_uid)->pw_name,
-            group_width, getgrgid(f->stat.st_gid)->gr_name,
-            file_size_width, f->stat.st_size, d_buf, n_buf, link_part, link_name);
+        if (options & LIST) {
+            const char *link_part = f->link_name ? " -> " : "";
+            const char *link_name = f->link_name ? f->link_name : "";
 
-        if (pos + line_len + 1 > buf_size) {
-            buf_size *= 2;
-            output_buf = realloc(output_buf, buf_size);
+            // Get data into stack buffers
+            date(&f->stat.st_mtime, d_buf, sizeof(d_buf));
+            permissions(f, p_buf);
+
+            // Calculate line length and resize buffer if needed
+            int line_len = snprintf(NULL, 0, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
+                p_buf, blocks_size_width, f->stat.st_nlink,
+                user_width, getpwuid(f->stat.st_uid)->pw_name,
+                group_width, getgrgid(f->stat.st_gid)->gr_name,
+                file_size_width, f->stat.st_size, d_buf, n_buf, link_part, link_name);
+
+            if (pos + line_len + 1 > buf_size) {
+                buf_size *= 2;
+                output_buf = realloc(output_buf, buf_size);
+            }
+
+            // Append to buffer
+            pos += snprintf(output_buf + pos, buf_size - pos, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
+                p_buf, blocks_size_width, f->stat.st_nlink,
+                user_width, getpwuid(f->stat.st_uid)->pw_name,
+                group_width, getgrgid(f->stat.st_gid)->gr_name,
+                file_size_width, f->stat.st_size, d_buf, n_buf, link_part, link_name);
+        
+        } else {
+            pos += snprintf(output_buf + pos, buf_size - pos, "%s ", n_buf);
         }
-
-        // Append to buffer
-        pos += snprintf(output_buf + pos, buf_size - pos, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-            p_buf, blocks_size_width, f->stat.st_nlink,
-            user_width, getpwuid(f->stat.st_uid)->pw_name,
-            group_width, getgrgid(f->stat.st_gid)->gr_name,
-            file_size_width, f->stat.st_size, d_buf, n_buf, link_part, link_name);
     }
 
     if (path) {
@@ -281,4 +293,59 @@ int ls(char *path, Options opts) {
     
 
     return (0);
+}
+
+int main(int ac, char **av) {
+    char **names = malloc((ac - 1) * sizeof(char *)); // Maximum possible non-option arguments
+    if (!names) {
+        return EXIT_FAILURE;
+    }
+    
+    int name_count = 0;
+    int process_options = 1;
+
+    for (int i = 1; i < ac; i++) {
+        if (process_options && av[i][0] == '-' && av[i][1] != '\0') {
+            if (ft_strcmp(av[i], "--") == 0) {
+                process_options = 0;
+                continue;
+            }
+
+            // Process each option character
+            char *opt = av[i] + 1;
+            while (*opt) {
+                switch (*opt) {
+                    case 'l': options |= LIST; break;
+                    case 'R': options |= RECURSE; break;
+                    case 'r': options |= REVERSE; break;
+                    case 'a': options |= ALL; break;
+                    case 't': options |= TIME; break;
+                    default:
+                        fprintf(stderr, "Invalid option: '%c'\n", *opt);
+                        free(names);
+                        exit(EXIT_FAILURE);
+                }
+                opt++;
+            }
+
+        } else {
+            // Add to names array
+            names[name_count++] = av[i];
+        }
+    }
+
+    if (name_count != 0) {
+        names = realloc(names, name_count * sizeof(char *));
+        quicksort(names, name_count, sizeof(char *), compare_name);
+        
+        for (int i = 0; i < name_count; i++) {
+            ls(names[i], options);
+        }
+
+    } else {
+        ls(".", options);
+    }
+
+    free(names);
+    return EXIT_SUCCESS;
 }
