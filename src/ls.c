@@ -1,24 +1,17 @@
 #include "ls.h"
 
-// static int  permissions_width = 0;
-static int  blocks_size_width = 0;
-static int  file_size_width = 0;
-static int  group_width = 0;
-static int  user_width = 0;
+static Options options = NONE;
+static ColumnWidths widths = {0};
 
-static Options  options = NONE;
-
-
-int int_len(int n) {
+static int int_len(int n) {
     int i = 1;
     while ((n = n / 10) != 0) {
-        i++;
+        ++i;
     }
-
-    return i;
+    return (i);
 }
 
-void colored_name(const t_file *file, char *buffer, size_t buffer_size) {
+static void colored_name(const FileInfo *file, char *buffer, size_t buffer_size) {
     const char *color = RESET;
     if (S_ISDIR(file->stat.st_mode))        color = BLUE;
     else if (S_ISFIFO(file->stat.st_mode))  color = CYAN;
@@ -28,69 +21,52 @@ void colored_name(const t_file *file, char *buffer, size_t buffer_size) {
     snprintf(buffer, buffer_size, "%s%s%s", color, file->name, RESET);
 }
 
-// char    *date(const time_t *timestamp) {
-//     char    *date = "";
-
-//     time_t  now = time(NULL);
-    
-//     char    *file_time = ft_strdup(ctime(timestamp));
-//     char    *curr_time = ft_strdup(ctime(&now));
-
-//     char    *month = ft_substr(file_time, 4, 4);
-//     char    *day = ft_substr(file_time, 8, 3);
-//     char    *hour = ft_substr(file_time, 11, 5);
-
-//     char    *year = ft_substr(file_time, 20, 4);
-//     char    *curr = ft_substr(curr_time, 20, 4);
-
-//     date = ft_strjoin(date, month);
-//     date = ft_strjoin(date, day);
-
-//     if (ft_strcmp(year, curr) != 0) {
-//         date = ft_strjoin(date, year);
-//     } else {
-//         date = ft_strjoin(date, hour);
-//     }
-
-//     free(curr_time);
-//     free(file_time);
-//     free(month);
-//     free(day);
-//     free(hour);
-//     free(year);
-//     free(curr);
-    
-//     return date;
-// }
-
-void date(const time_t *timestamp, char *buffer, size_t buffer_size) {
-    struct tm *tm_info = localtime(timestamp);
+static void format_date(const FileInfo *file, char *buffer) {
     time_t now = time(NULL);
+    time_t file_time = file->stat.st_mtime;
     struct tm *now_tm = localtime(&now);
+    struct tm *file_tm = localtime(&file_time);
+    
+    const char *months[] = {
+        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+    };
+    
+    time_t six_months = 180 * 24 * 60 * 60;
+    int is_recent = (file_time >= now - six_months) && 
+                   (file_time <= now + six_months) &&
+                   (file_tm->tm_year == now_tm->tm_year);
 
-    char file_year[5], now_year[5];
-    strftime(file_year, sizeof(file_year), "%Y", tm_info);
-    strftime(now_year, sizeof(now_year), "%Y", now_tm);
-
-    if (ft_strcmp(file_year, now_year) == 0) {
-        strftime(buffer, buffer_size, "%b %e %H:%M", tm_info); // e.g., "Jun 30 21:49"
+    if (is_recent) {
+        snprintf(
+            buffer, 13, "%s %2d %02d:%02d",
+            months[file_tm->tm_mon],
+            file_tm->tm_mday,
+            file_tm->tm_hour,
+            file_tm->tm_min
+        );
     } else {
-        strftime(buffer, buffer_size, "%b %e  %Y", tm_info);   // e.g., "Jun 30  1993"
+        snprintf(
+            buffer, 13, "%s %2d  %04d",
+            months[file_tm->tm_mon],
+            file_tm->tm_mday,
+            file_tm->tm_year + 1900
+        );
     }
 }
 
-void permissions(t_file *file, char *buffer) {
-    struct stat st = file->stat;
-    mode_t mode = st.st_mode;
+static void format_permissions(FileInfo *file, char *buffer) {
+    mode_t mode = file->stat.st_mode;
+    char type = '-';
 
-    buffer[0] = '-';
-    if (S_ISDIR(mode))       buffer[0] = 'd';
-    else if (S_ISCHR(mode))  buffer[0] = 'c';
-    else if (S_ISBLK(mode))  buffer[0] = 'b';
-    else if (S_ISFIFO(mode)) buffer[0] = 'p';
-    else if (S_ISLNK(mode))  buffer[0] = 'l';
-    else if (S_ISSOCK(mode)) buffer[0] = 's';
+    if (S_ISDIR(mode))       type = 'd';
+    else if (S_ISCHR(mode))  type = 'c';
+    else if (S_ISBLK(mode))  type = 'b';
+    else if (S_ISFIFO(mode)) type = 'p';
+    else if (S_ISLNK(mode))  type = 'l';
+    else if (S_ISSOCK(mode)) type = 's';
 
+    buffer[0] = type;
     buffer[1] = (mode & S_IRUSR) ? 'r' : '-';
     buffer[2] = (mode & S_IWUSR) ? 'w' : '-';
     buffer[3] = (mode & S_IXUSR) ? 
@@ -107,211 +83,198 @@ void permissions(t_file *file, char *buffer) {
         ((mode & S_ISVTX) ? 't' : 'x') :
         ((mode & S_ISVTX) ? 'T' : '-');
 
-    // perms[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : '\0';
-    buffer[10] = '\0';
+    buffer[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : ' ';
+    buffer[11] = '\0';
 }
 
-void print_files(t_file **files, size_t count, const char *path, unsigned long total) {
-    size_t  buf_size = 4096;
-    char    *output_buf = malloc(buf_size);
-    size_t  pos = 0;
+static void print_files_info(FileInfo **files, size_t count, const char *path, unsigned long total) {
+    size_t buf_size = 4096;
+    char *output_buf = malloc(buf_size);
+    size_t pos = 0;
 
+    // Print header for recursive mode
     if (options & LIST) {
         if (options & RECURSE) {
             pos += snprintf(output_buf + pos, buf_size - pos, "%s:\ntotal %lu\n", path, total);
-
         } else {
             pos += snprintf(output_buf + pos, buf_size - pos, "total %lu\n", total);
         }
     }
 
+    // Process each file
     for (size_t i = 0; i < count; i++) {
-        t_file *f = files[i];
-        char d_buf[64], p_buf[12], n_buf[256];
-        colored_name(f, n_buf, sizeof(n_buf));
+        FileInfo *file = files[i];
+        char date_buf[13], perm_buf[12], name_buf[256];
+        colored_name(file, name_buf, sizeof(name_buf));
 
         if (options & LIST) {
-            const char *link_part = f->link_name ? " -> " : "";
-            const char *link_name = f->link_name ? f->link_name : "";
+            const char *link_indicator = file->link_name ? " -> " : "";
+            const char *link_target = file->link_name ? file->link_name : "";
 
-            // Get data into stack buffers
-            date(&f->stat.st_mtime, d_buf, sizeof(d_buf));
-            permissions(f, p_buf);
+            format_date(file, date_buf);
+            format_permissions(file, perm_buf);
 
-            // Calculate line length and resize buffer if needed
+            // Format the line
             int line_len = snprintf(NULL, 0, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-                p_buf, blocks_size_width, f->stat.st_nlink,
-                user_width, getpwuid(f->stat.st_uid)->pw_name,
-                group_width, getgrgid(f->stat.st_gid)->gr_name,
-                file_size_width, f->stat.st_size, d_buf, n_buf, link_part, link_name);
+                perm_buf, widths.blocks, file->stat.st_nlink,
+                widths.user, getpwuid(file->stat.st_uid)->pw_name,
+                widths.group, getgrgid(file->stat.st_gid)->gr_name,
+                widths.size, file->stat.st_size, date_buf, name_buf, 
+                link_indicator, link_target);
 
+            // Resize buffer if needed
             if (pos + line_len + 1 > buf_size) {
                 buf_size *= 2;
                 output_buf = realloc(output_buf, buf_size);
             }
 
-            // Append to buffer
-            pos += snprintf(output_buf + pos, buf_size - pos, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-                p_buf, blocks_size_width, f->stat.st_nlink,
-                user_width, getpwuid(f->stat.st_uid)->pw_name,
-                group_width, getgrgid(f->stat.st_gid)->gr_name,
-                file_size_width, f->stat.st_size, d_buf, n_buf, link_part, link_name);
-        
+            // Add to output buffer
+            pos += snprintf(output_buf + pos, buf_size - pos, 
+                "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
+                perm_buf, widths.blocks, file->stat.st_nlink,
+                widths.user, getpwuid(file->stat.st_uid)->pw_name,
+                widths.group, getgrgid(file->stat.st_gid)->gr_name,
+                widths.size, file->stat.st_size, date_buf, name_buf, 
+                link_indicator, link_target);
         } else {
-            pos += snprintf(output_buf + pos, buf_size - pos, "%s ", n_buf);
+            pos += snprintf(output_buf + pos, buf_size - pos, "%s  ", name_buf);
+            if (count - 1 == i) {
+                pos += snprintf(output_buf + pos, buf_size - pos, "\n");
+            }
         }
-    }
-
-    if (path) {
-        pos += snprintf(output_buf + pos, buf_size - pos, "\n");
     }
 
     fwrite(output_buf, 1, pos, stdout);
     free(output_buf);
 }
 
-void free_file(t_file *file) {
-    if (file->link_name) {
+static void free_file(FileInfo *file) {
+    if (file) {
         free(file->link_name);
+        free(file->name);
+        free(file);
     }
-
-    free(file->name);
-    free(file);
 }
 
-// **Free list element**
-void free_files(t_file **files, size_t count) {
+static void free_files(FileInfo **files, size_t count) {
     for (size_t i = 0; i < count; i++) {
         free_file(files[i]);
     }
-
     free(files);
 }
 
-int ls(char *path, Options opts) {
-    DIR             *dir = NULL;
-    struct dirent   *entry = NULL;
-    t_file          **files = NULL;
-    size_t          capacity = 16;
-    size_t          count = 0;
-    unsigned long   total = 0;
+static DirectoryData read_directory(char *path) {
+    DirectoryData data = {0};
+    DIR *dir = opendir(path);
+    if (!dir) return (data);
 
-    dir = opendir(path);
-    if (dir == NULL) {
-        return 1;
-    }
+    size_t capacity = 16;
+    data.files = malloc(capacity * sizeof(FileInfo *));
+    unsigned long total_blocks = 0;
 
-    files = malloc(capacity * sizeof(t_file *));
-    if (!files) {
-        closedir(dir);
-        return 1;
-    }
-
+    // Process directory entries
+    struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
-        // Skip hidden files if ALL is set
-        if (!(opts & ALL) && entry->d_name[0] == '.') {
-            continue ;
-        }
+        // Skip hidden files unless -a option is set
+        if (!(options & ALL) && entry->d_name[0] == '.') continue;
 
-        char    full_path[1024];
+        char full_path[1024];
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
 
         struct stat st;
-        if (lstat(full_path, &st) == 0) {
-            t_file *new_file = malloc(sizeof(t_file));
-            new_file->name = ft_strdup(entry->d_name);
-            new_file->link_name = NULL;
-            new_file->stat = st;
+        if (lstat(full_path, &st) != 0) continue;
 
-            if (count >= capacity) {
-                capacity *= 2;
-                t_file **new_files = realloc(files, capacity * sizeof(t_file *));
-                if (!new_files) {
-                    perror("realloc");
-                    break;
-                }
-                files = new_files;
+        // Create file entry
+        FileInfo *file = malloc(sizeof(FileInfo));
+        file->name = ft_strdup(entry->d_name);
+        file->link_name = NULL;
+        file->stat = st;
+
+        // Resize array if needed
+        if (data.count >= capacity) {
+            capacity *= 2;
+            FileInfo **new_files = realloc(data.files, capacity * sizeof(FileInfo *));
+            if (!new_files) {
+                perror("realloc");
+                break;
             }
+            data.files = new_files;
+        }
+        data.files[data.count++] = file;
 
-            files[count++] = new_file;
+        // Update column widths and totals
+        total_blocks += st.st_blocks / 2;
+        widths.blocks = MAX(widths.blocks, int_len(st.st_nlink));
+        widths.size = MAX(widths.size, int_len(st.st_size));
 
-            // Update column widths and total blocks
-            total += st.st_blocks / 2;
-            blocks_size_width = MAX(blocks_size_width, int_len(st.st_nlink));
-            file_size_width = MAX(file_size_width, int_len(st.st_size));
+        char *user = getpwuid(st.st_uid)->pw_name;
+        char *group = getgrgid(st.st_gid)->gr_name;
+        widths.user = MAX(widths.user, ft_strlen(user));
+        widths.group = MAX(widths.group, ft_strlen(group));
 
-            char *user = getpwuid(st.st_uid)->pw_name;
-            char *group = getgrgid(st.st_gid)->gr_name;
-            user_width = MAX(user_width, ft_strlen(user));
-            group_width = MAX(group_width, ft_strlen(group));
-
-            // Handle symlinks
-            if (S_ISLNK(st.st_mode)) {
-                char *link_name = malloc(1024);
-                if (readlink(full_path, link_name, 1024 - 1) == -1) {
-                    free(link_name);
-                    new_file->link_name = NULL;
-                } else {
-                    new_file->link_name = link_name;
-                }
+        // Handle symlinks
+        if (S_ISLNK(st.st_mode)) {
+            char *link_name = malloc(1024);
+            if (readlink(full_path, link_name, 1024) > 0) {
+                file->link_name = link_name;
+            } else {
+                free(link_name);
             }
         }
-    }
-
-    if (opts & TIME) {
-        quicksort(files, count, sizeof(t_file *), compare_file_mtime);
-    } else {
-        quicksort(files, count, sizeof(t_file *), compare_file_name);
     }
 
     closedir(dir);
-
-    print_files(files, count, path, total);
-    
-    // Recursion for directories if RECURSE is set
-    if (opts & RECURSE) {
-        for (size_t i = 0; i < count; i++) {
-            t_file *f = files[i];
-            if (S_ISDIR(f->stat.st_mode) && ft_strcmp(f->name, ".") != 0 && ft_strcmp(f->name, "..") != 0) {                
-                char sub_path[1024];
-                snprintf(sub_path, sizeof(sub_path), "%s/%s", path, f->name);
-                
-                if (ls(sub_path, opts) == 1) {
-                    free_files(files, count);
-                    exit(1);
-                }
-            }
-
-            free_file(files[i]);
-        }
-
-        free(files);
-
-    } else {
-        free_files(files, count);
-    }
-    
-
-    return (0);
+    data.total_blocks = total_blocks;
+    data.widths = widths;
+    return (data);
 }
 
-int main(int ac, char **av) {
-    char **names = malloc((ac - 1) * sizeof(char *)); // Maximum possible non-option arguments
-    if (!names) {
-        return EXIT_FAILURE;
-    }
+static void process_directory(char *path) {
+    // Read directory contents
+    DirectoryData data = read_directory(path);
+    if (!data.files) return;
     
-    int name_count = 0;
-    int process_options = 1;
+    // Sort files
+    if (options & TIME) {
+        quicksort(data.files, data.count, sizeof(FileInfo *), compare_file_mtime);
+    } else {
+        quicksort(data.files, data.count, sizeof(FileInfo *), compare_file_name);
+    }
 
+    // Print files
+    print_files_info(data.files, data.count, path, data.total_blocks);
+    
+    // Handle recursion
+    if (options & RECURSE) {
+        for (size_t i = 0; i < data.count; i++) {
+            FileInfo *file = data.files[i];
+            int is_special_dir = !ft_strcmp(file->name, ".") || !ft_strcmp(file->name, "..");
+            
+            if (S_ISDIR(file->stat.st_mode) && !is_special_dir) {                
+                char sub_path[1024];
+                snprintf(sub_path, sizeof(sub_path), "%s/%s", path, file->name);
+                
+                printf("\n");
+                process_directory(sub_path);
+            }
+            free_file(file);
+        }
+        free(data.files);
+    } else {
+        free_files(data.files, data.count);
+    }
+}
+
+static int process_options(int ac, char **av) {
+    int process_flag = 1;
+    
     for (int i = 1; i < ac; i++) {
-        if (process_options && av[i][0] == '-' && av[i][1] != '\0') {
+        if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
             if (ft_strcmp(av[i], "--") == 0) {
-                process_options = 0;
+                process_flag = 0;
                 continue;
             }
-
-            // Process each option character
+            
             char *opt = av[i] + 1;
             while (*opt) {
                 switch (*opt) {
@@ -322,30 +285,51 @@ int main(int ac, char **av) {
                     case 't': options |= TIME; break;
                     default:
                         fprintf(stderr, "Invalid option: '%c'\n", *opt);
-                        free(names);
-                        exit(EXIT_FAILURE);
+                        return -1;
                 }
                 opt++;
             }
+        }
+    }
+    return 0;
+}
 
+static int process_names(int ac, char **av, char ***names) {
+    *names = malloc((ac - 1) * sizeof(char *));
+    if (!*names) return -1;
+    
+    int count = 0;
+    int process_flag = 1;
+    
+    for (int i = 1; i < ac; i++) {
+        if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
+            if (ft_strcmp(av[i], "--") == 0) process_flag = 0;
         } else {
-            // Add to names array
-            names[name_count++] = av[i];
+            (*names)[count++] = av[i];
         }
     }
+    return count;
+}
 
-    if (name_count != 0) {
-        names = realloc(names, name_count * sizeof(char *));
-        quicksort(names, name_count, sizeof(char *), compare_name);
-        
-        for (int i = 0; i < name_count; i++) {
-            ls(names[i], options);
+int main(int ac, char **av) {
+    char **names = NULL;
+    int names_count;
+    
+    if (process_options(ac, av) != 0) return EXIT_FAILURE;
+    names_count = process_names(ac, av, &names);
+    if (names_count == -1) return EXIT_FAILURE;
+    
+    if (names_count > 0) {
+        quicksort(names, names_count, sizeof(char *), compare_name);
+
+        for (int i = 0; i < names_count; i++) {
+            if (i != 0) printf("\n");
+            process_directory(names[i]);
         }
-
     } else {
-        ls(".", options);
+        process_directory(".");
     }
-
+    
     free(names);
     return EXIT_SUCCESS;
 }
