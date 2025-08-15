@@ -1,6 +1,7 @@
 #include "ls.h"
 
 static Options options = NONE;
+static SortType sort_type = SORT_NAME;
 static ColumnWidths widths = {0};
 
 static int int_len(int n) {
@@ -247,13 +248,20 @@ static void process_directory(char *path) {
         return;
     }
     
-    // Sort files
-    if (options & TIME) {
-        quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_mtime);
-    } else if (options & SIZE) {
-        quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_size);
-    } else {
-        quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_name);
+    // Sort files based on the current sort_type
+    switch (sort_type) {
+        case SORT_NONE:
+            break;
+        case SORT_TIME:
+            quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_mtime);
+            break;
+        case SORT_SIZE:
+            quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_size);
+            break;
+        case SORT_NAME:
+        default:
+            quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_name);
+            break;
     }
 
     // Print files
@@ -297,8 +305,9 @@ static int process_options(int ac, char **av) {
                     case 'R': options |= RECURSE; break;
                     case 'r': options |= REVERSE; break;
                     case 'a': options |= ALL; break;
-                    case 't': options |= TIME; break;
-                    case 'S': options |= SIZE; break;
+                    case 't': sort_type = SORT_TIME; break;
+                    case 'S': sort_type = SORT_SIZE; break;
+                    case 'U': sort_type = SORT_NONE; break;
                     default:
                         fprintf(stderr, "Invalid option: '%c'\n", *opt);
                         return (-1);

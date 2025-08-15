@@ -49,9 +49,14 @@ typedef enum {
     RECURSE = 1 << 1,
     REVERSE = 1 << 2,
     ALL     = 1 << 3,
-    TIME    = 1 << 4,
-    SIZE    = 1 << 5,
 }   Options;
+
+typedef enum {
+    SORT_NAME,  // Default sorting
+    SORT_TIME,  // -t flag
+    SORT_SIZE,  // -S flag
+    SORT_NONE,  // -U flag
+}   SortType;
 
 int ls(char *path);
 
