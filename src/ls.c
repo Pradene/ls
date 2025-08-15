@@ -3,7 +3,6 @@
 static Options options = NONE;
 static SortType sort_type = SORT_NAME;
 static ShowType show_type = SHOW_NORMAL;
-static ColumnWidths widths = {0};
 
 static int int_len(int n) {
     int i = 1;
@@ -21,6 +20,167 @@ static void colored_name(const FileInfo *file, char *buffer, size_t buffer_size)
     else if (file->stat.st_mode & S_IXUSR)  color = GREEN;
 
     snprintf(buffer, buffer_size, "%s%s%s", color, file->name, RESET);
+}
+
+static int get_terminal_width(void) {
+    struct winsize w;
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0) {
+        return (w.ws_col);
+    }
+    return (80); // Default width if can't determine
+}
+
+static int get_display_width(const char *str) {
+    int width = 0;
+    int in_escape = 0;
+    
+    for (int i = 0; str[i]; i++) {
+        if (str[i] == '\x1B') {
+            in_escape = 1;
+        } else if (in_escape && str[i] == 'm') {
+            in_escape = 0;
+        } else if (!in_escape) {
+            width++;
+        }
+    }
+    return (width);
+}
+
+static void print_in_columns(DirectoryInfo directory) {
+    if (directory.files_count == 0) {
+        return;
+    }
+    
+    int term_width = get_terminal_width();
+    char **display_names = malloc(directory.files_count * sizeof(char *));
+    if (!display_names) {
+        fprintf(stderr, "malloc failed\n");
+        return;
+    }
+    
+    int *name_widths = malloc(directory.files_count * sizeof(int));
+    if (!name_widths) {
+        free(display_names);
+        fprintf(stderr, "malloc failed\n");
+        return;
+    }
+    
+    // Initialize display_names array to NULL for safe cleanup
+    for (size_t i = 0; i < directory.files_count; i++) {
+        display_names[i] = NULL;
+    }
+    
+    // Prepare display names and calculate their widths
+    for (size_t i = 0; i < directory.files_count; i++) {
+        display_names[i] = malloc(256);
+        if (!display_names[i]) {
+            // Clean up previously allocated display_names
+            for (size_t j = 0; j < i; j++) {
+                free(display_names[j]);
+            }
+            free(display_names);
+            free(name_widths);
+            fprintf(stderr, "malloc failed\n");
+            return;
+        }
+        colored_name(directory.files[i], display_names[i], 256);
+        name_widths[i] = get_display_width(display_names[i]);
+    }
+    
+    int best_cols = 1;
+    int best_rows = directory.files_count;
+    int *best_col_widths = NULL;
+    
+    // Try different numbers of columns to find the optimal layout
+    for (int cols = 1; cols <= (int)directory.files_count; cols++) {
+        int rows = (directory.files_count + cols - 1) / cols;
+        
+        // Calculate column widths for this layout
+        int *col_widths = calloc(cols, sizeof(int));
+        if (!col_widths) {
+            // Continue with current best layout if allocation fails
+            break;
+        }
+        
+        int total_width = 0;
+        int valid = 1;
+        
+        // For each column, find the maximum width needed
+        for (int col = 0; col < cols; col++) {
+            int max_width_in_col = 0;
+            
+            // Check all items that would go in this column
+            for (int row = 0; row < rows; row++) {
+                int index = col * rows + row;
+                if (index < (int)directory.files_count) {
+                    if (name_widths[index] > max_width_in_col) {
+                        max_width_in_col = name_widths[index];
+                    }
+                }
+            }
+            
+            col_widths[col] = max_width_in_col;
+            total_width += max_width_in_col;
+            
+            // Add spacing between columns (2 spaces), except for the last column
+            if (col < cols - 1) {
+                total_width += 2;
+            }
+        }
+        
+        // Check if this layout fits in the terminal width
+        if (total_width > term_width) {
+            valid = 0;
+        }
+        
+        // If valid and better than current best (fewer rows, or same rows but more columns)
+        if (valid && (rows < best_rows || (rows == best_rows && cols > best_cols))) {
+            best_cols = cols;
+            best_rows = rows;
+            free(best_col_widths);
+            best_col_widths = col_widths;
+        } else {
+            free(col_widths);
+        }
+        
+        // If we've reached 1 row, we can't do better
+        if (rows == 1) {
+            break;
+        }
+    }
+    
+    // Print using the best layout found
+    for (int row = 0; row < best_rows; row++) {
+        for (int col = 0; col < best_cols; col++) {
+            int index = col * best_rows + row;
+            if (index >= (int)directory.files_count) {
+                break;
+            }
+            
+            printf("%s", display_names[index]);
+            
+            // Add padding if not the last column and there are more items
+            if (col < best_cols - 1) {
+                // Check if there's an item in the next column for this row
+                int next_index = (col + 1) * best_rows + row;
+                if (next_index < (int)directory.files_count) {
+                    int padding = best_col_widths ? (best_col_widths[col] - name_widths[index] + 2) : 2;
+                    for (int p = 0; p < padding; p++) {
+                        printf(" ");
+                    }
+                }
+            }
+        }
+        printf("\n");
+    }
+    
+    // Clean up
+    for (size_t i = 0; i < directory.files_count; i++) {
+        free(display_names[i]);
+    }
+    free(display_names);
+    free(name_widths);
+    free(best_col_widths);
 }
 
 static void format_date(const FileInfo *file, char *buffer) {
@@ -90,67 +250,75 @@ static void format_permissions(FileInfo *file, char *buffer) {
 }
 
 static void print_directory(DirectoryInfo directory, const char *path) {
-    size_t buf_size = 4096;
-    char *output_buf = malloc(buf_size);
-    if (!output_buf) {
-        return;
+    // Print header for recursive mode or list mode
+    if (options & RECURSE) {
+        printf("%s:\n", path);
     }
-    size_t pos = 0;
-
-    // Print header for recursive mode
     if (options & LIST) {
-        if (options & RECURSE) {
-            pos += snprintf(output_buf + pos, buf_size - pos, "%s:\ntotal %lu\n", path, directory.total_blocks);
-        } else {
-            pos += snprintf(output_buf + pos, buf_size - pos, "total %lu\n", directory.total_blocks);
-        }
+        printf("total %lu\n", directory.total_blocks);
     }
 
-    // Process each file
-    for (size_t i = 0; i < directory.files_count; i++) {
-        FileInfo *file = directory.files[i];
-        char date_buf[64], perm_buf[64], name_buf[256];
-        colored_name(file, name_buf, sizeof(name_buf));
+    if (options & LIST) {
+        // Long listing format
+        size_t buf_size = 4096;
+        char *buf = malloc(sizeof(char) * buf_size);
+        if (!buf) {
+            return;
+        }
+        size_t pos = 0;
 
-        if (options & LIST) {
+        // Process each file in long format
+        for (size_t i = 0; i < directory.files_count; i++) {
+            FileInfo *file = directory.files[i];
+            char date_buf[64], perm_buf[64], name_buf[256];
+            colored_name(file, name_buf, sizeof(name_buf));
+
             const char *link_indicator = file->link_name ? " -> " : "";
             const char *link_target = file->link_name ? file->link_name : "";
 
             format_date(file, date_buf);
             format_permissions(file, perm_buf);
 
+            struct passwd *pwd = getpwuid(file->stat.st_uid);
+            struct group *grp = getgrgid(file->stat.st_gid);
+            const char *username = pwd ? pwd->pw_name : "unknown";
+            const char *groupname = grp ? grp->gr_name : "unknown";
+
             // Format the line
             int line_len = snprintf(NULL, 0, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
                 perm_buf, directory.widths.blocks, file->stat.st_nlink,
-                directory.widths.user, getpwuid(file->stat.st_uid)->pw_name,
-                directory.widths.group, getgrgid(file->stat.st_gid)->gr_name,
+                directory.widths.user, username,
+                directory.widths.group, groupname,
                 directory.widths.size, file->stat.st_size, date_buf, name_buf, 
                 link_indicator, link_target);
 
             // Resize buffer if needed
             if (pos + line_len + 1 > buf_size) {
                 buf_size *= 2;
-                output_buf = realloc(output_buf, buf_size);
+                char *new_buf = realloc(buf, buf_size);
+                if (!new_buf) {
+                    free(buf);
+                    return;
+                }
+                buf = new_buf;
             }
 
             // Add to output buffer
-            pos += snprintf(output_buf + pos, buf_size - pos, 
+            pos += snprintf(buf + pos, buf_size - pos, 
                 "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
                 perm_buf, directory.widths.blocks, file->stat.st_nlink,
-                directory.widths.user, getpwuid(file->stat.st_uid)->pw_name,
-                directory.widths.group, getgrgid(file->stat.st_gid)->gr_name,
+                directory.widths.user, username,
+                directory.widths.group, groupname,
                 directory.widths.size, file->stat.st_size, date_buf, name_buf, 
                 link_indicator, link_target);
-        } else {
-            pos += snprintf(output_buf + pos, buf_size - pos, "%s  ", name_buf);
-            if (directory.files_count - 1 == i) {
-                pos += snprintf(output_buf + pos, buf_size - pos, "\n");
-            }
         }
-    }
 
-    fwrite(output_buf, 1, pos, stdout);
-    free(output_buf);
+        fwrite(buf, 1, pos, stdout);
+        free(buf);
+    } else {
+        // Column-based format
+        print_in_columns(directory);
+    }
 }
 
 static void free_file(FileInfo *file) {
@@ -162,10 +330,12 @@ static void free_file(FileInfo *file) {
 }
 
 static void free_files(FileInfo **files, size_t count) {
-    for (size_t i = 0; i < count; i++) {
-        free_file(files[i]);
+    if (files) {
+        for (size_t i = 0; i < count; i++) {
+            free_file(files[i]);
+        }
+        free(files);
     }
-    free(files);
 }
 
 static DirectoryInfo read_directory(char *path) {
@@ -178,9 +348,10 @@ static DirectoryInfo read_directory(char *path) {
     size_t capacity = 16;
     data.files = malloc(capacity * sizeof(FileInfo *));
     if (!data.files) {
+        closedir(dir);
+        fprintf(stderr, "malloc failed\n");
         return (data);
     }
-    unsigned long total_blocks = 0;
 
     // Process directory entries
     struct dirent *entry;
@@ -206,7 +377,26 @@ static DirectoryInfo read_directory(char *path) {
 
         // Create file entry
         FileInfo *file = malloc(sizeof(FileInfo));
+        if (!file) {
+            free_files(data.files, data.files_count);
+            data.files = NULL;
+            data.files_count = 0;
+            closedir(dir);
+            fprintf(stderr, "malloc failed\n");
+            return (data);
+        }
+        
         file->name = ft_strdup(entry->d_name);
+        if (!file->name) {
+            free(file);
+            free_files(data.files, data.files_count);
+            data.files = NULL;
+            data.files_count = 0;
+            closedir(dir);
+            fprintf(stderr, "ft_strdup failed\n");
+            return (data);
+        }
+        
         file->link_name = NULL;
         file->stat = st;
 
@@ -215,27 +405,39 @@ static DirectoryInfo read_directory(char *path) {
             capacity *= 2;
             FileInfo **new_files = realloc(data.files, capacity * sizeof(FileInfo *));
             if (!new_files) {
-                break;
+                free_file(file);
+                free_files(data.files, data.files_count);
+                data.files = NULL;
+                data.files_count = 0;
+                closedir(dir);
+                fprintf(stderr, "realloc failed\n");
+                return (data);
             }
             data.files = new_files;
         }
         data.files[data.files_count++] = file;
 
         // Update column widths and totals
-        total_blocks += st.st_blocks / 2;
-        widths.blocks = MAX(widths.blocks, int_len(st.st_nlink));
-        widths.size = MAX(widths.size, int_len(st.st_size));
+        struct passwd *pwd = getpwuid(st.st_uid);
+        struct group *grp = getgrgid(st.st_gid);
+        char *user = pwd ? pwd->pw_name : "unknown";
+        char *group = grp ? grp->gr_name : "unknown";
 
-        char *user = getpwuid(st.st_uid)->pw_name;
-        char *group = getgrgid(st.st_gid)->gr_name;
-        widths.user = MAX(widths.user, ft_strlen(user));
-        widths.group = MAX(widths.group, ft_strlen(group));
+        data.total_blocks += st.st_blocks / 2;
+        data.widths.blocks = MAX(data.widths.blocks, int_len(st.st_nlink));
+        data.widths.size = MAX(data.widths.size, int_len(st.st_size));
+        data.widths.user = MAX(data.widths.user, ft_strlen(user));
+        data.widths.group = MAX(data.widths.group, ft_strlen(group));
 
         // Handle symlinks
         if (S_ISLNK(st.st_mode)) {
             char *link_name = malloc(1024);
-            if (readlink(full_path, link_name, 1024) > 0) {
-                file->link_name = link_name;
+            if (link_name) {
+                ssize_t len = readlink(full_path, link_name, 1023);
+                if (len > 0) {
+                    link_name[len] = '\0'; 
+                    file->link_name = link_name;
+                }
             } else {
                 free(link_name);
             }
@@ -243,8 +445,6 @@ static DirectoryInfo read_directory(char *path) {
     }
 
     closedir(dir);
-    data.total_blocks = total_blocks;
-    data.widths = widths;
     return (data);
 }
 
@@ -295,26 +495,24 @@ static int process_options(int ac, char **av) {
         if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
             if (ft_strcmp(av[i], "--") == 0) {
                 process_flag = 0;
-                continue;
-            }
-            
-            char *opt = av[i] + 1;
-            while (*opt) {
-                switch (*opt) {
-                    case 'l': options |= LIST; break;
-                    case 'R': options |= RECURSE; break;
-                    case 'r': options |= REVERSE; break;
-                    case 'a': show_type = SHOW_ALL; break;
-                    case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
-                    case 'A': show_type = SHOW_ALMOST_ALL; break;
-                    case 't': sort_type = SORT_TIME; break;
-                    case 'S': sort_type = SORT_SIZE; break;
-                    case 'U': sort_type = SORT_NONE; break;
-                    default:
+            } else {
+                char *opt = av[i];
+                while (*(++opt)) {
+                    switch (*opt) {
+                        case 'l': options |= LIST; break;
+                        case 'R': options |= RECURSE; break;
+                        case 'r': options |= REVERSE; break;
+                        case 'a': show_type = SHOW_ALL; break;
+                        case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
+                        case 'A': show_type = SHOW_ALMOST_ALL; break;
+                        case 't': sort_type = SORT_TIME; break;
+                        case 'S': sort_type = SORT_SIZE; break;
+                        case 'U': sort_type = SORT_NONE; break;
+                        default:
                         fprintf(stderr, "Invalid option: '%c'\n", *opt);
                         return (-1);
+                    }
                 }
-                opt++;
             }
         }
     }
@@ -324,6 +522,7 @@ static int process_options(int ac, char **av) {
 static int process_names(int ac, char **av, char ***names) {
     *names = malloc((ac - 1) * sizeof(char *));
     if (!*names) {
+        fprintf(stderr, "malloc failed\n");
         return (-1);
     }
     

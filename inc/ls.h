@@ -4,6 +4,7 @@
 # include <sys/types.h>
 # include <sys/stat.h>
 # include <sys/xattr.h>
+# include <sys/ioctl.h>
 
 # include <dirent.h>
 # include <stdio.h>
@@ -13,6 +14,7 @@
 # include <pwd.h>
 # include <grp.h>
 # include <time.h>
+# include <termios.h>
 
 # include "libft.h"
 
