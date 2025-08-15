@@ -2,6 +2,7 @@
 
 static Options options = NONE;
 static SortType sort_type = SORT_NAME;
+static ShowType show_type = SHOW_NORMAL;
 static ColumnWidths widths = {0};
 
 static int int_len(int n) {
@@ -184,10 +185,16 @@ static DirectoryInfo read_directory(char *path) {
     // Process directory entries
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
-        // Skip hidden files unless -a option is set
-        if (!(options & ALL) && entry->d_name[0] == '.') {
-            continue;
+        // Handle hidden file display based on show_type
+        int is_hidden = (entry->d_name[0] == '.');
+        int is_special_dir = (!ft_strcmp(entry->d_name, ".") || !ft_strcmp(entry->d_name, ".."));
+        
+        if (show_type == SHOW_NORMAL && is_hidden) {
+            continue; // Skip all hidden files
+        } else if (show_type == SHOW_ALMOST_ALL && is_special_dir) {
+            continue; // Skip . and .. but show other hidden files
         }
+        // SHOW_ALL shows everything, so no skip conditions
 
         char full_path[1024];
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
@@ -250,18 +257,11 @@ static void process_directory(char *path) {
     
     // Sort files based on the current sort_type
     switch (sort_type) {
-        case SORT_NONE:
-            break;
-        case SORT_TIME:
-            quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_mtime);
-            break;
-        case SORT_SIZE:
-            quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_size);
-            break;
+        case SORT_NONE: break;
+        case SORT_TIME: quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_mtime); break;
+        case SORT_SIZE: quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_size); break;
         case SORT_NAME:
-        default:
-            quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_name);
-            break;
+        default: quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_name); break;
     }
 
     // Print files
@@ -304,7 +304,9 @@ static int process_options(int ac, char **av) {
                     case 'l': options |= LIST; break;
                     case 'R': options |= RECURSE; break;
                     case 'r': options |= REVERSE; break;
-                    case 'a': options |= ALL; break;
+                    case 'a': show_type = SHOW_ALL; break;
+                    case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
+                    case 'A': show_type = SHOW_ALMOST_ALL; break;
                     case 't': sort_type = SORT_TIME; break;
                     case 'S': sort_type = SORT_SIZE; break;
                     case 'U': sort_type = SORT_NONE; break;

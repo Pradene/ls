@@ -48,7 +48,6 @@ typedef enum {
     LIST    = 1 << 0,
     RECURSE = 1 << 1,
     REVERSE = 1 << 2,
-    ALL     = 1 << 3,
 }   Options;
 
 typedef enum {
@@ -57,6 +56,12 @@ typedef enum {
     SORT_SIZE,  // -S flag
     SORT_NONE,  // -U flag
 }   SortType;
+
+typedef enum {
+    SHOW_NORMAL,      // Default: hide hidden files
+    SHOW_ALL,         // -a flag: show all including . and ..
+    SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
+}   ShowType;
 
 int ls(char *path);
 
