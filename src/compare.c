@@ -24,6 +24,10 @@ int compare_file_mtime(const void *a, const void *b) {
     return (*(FileInfo **)b)->stat.st_mtime - (*(FileInfo **)a)->stat.st_mtime;
 }
 
+int compare_file_size(const void *a, const void *b) {
+    return (*(FileInfo **)b)->stat.st_size - (*(FileInfo **)a)->stat.st_size;
+}
+
 int compare_name(const void *a, const void *b) {
     char *t1 = *(char **)a;
     char *t2 = *(char **)b;

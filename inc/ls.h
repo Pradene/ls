@@ -38,10 +38,10 @@ typedef struct {
 
 typedef struct {
     FileInfo        **files;
-    size_t          count;
+    size_t          files_count;
     unsigned long   total_blocks;
     ColumnWidths    widths;
-}   DirectoryData;
+}   DirectoryInfo;
 
 typedef enum {
     NONE    = 0,
@@ -50,6 +50,7 @@ typedef enum {
     REVERSE = 1 << 2,
     ALL     = 1 << 3,
     TIME    = 1 << 4,
+    SIZE    = 1 << 5,
 }   Options;
 
 int ls(char *path);
@@ -58,6 +59,7 @@ void quicksort(void *base, size_t nmemb, size_t size, int (*comp)(const void *, 
 
 int compare_name(const void *a, const void *b);
 int compare_file_name(const void *a, const void *b);
+int compare_file_size(const void *a, const void *b);
 int compare_file_mtime(const void *a, const void *b);
 
 #endif

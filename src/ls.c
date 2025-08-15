@@ -34,8 +34,8 @@ static void format_date(const FileInfo *file, char *buffer) {
     
     time_t six_months = 180 * 24 * 60 * 60;
     int is_recent = (file_time >= now - six_months) && 
-                   (file_time <= now + six_months) &&
-                   (file_tm->tm_year == now_tm->tm_year);
+                    (file_time <= now + six_months) &&
+                    (file_tm->tm_year == now_tm->tm_year);
 
     if (is_recent) {
         snprintf(
@@ -87,24 +87,27 @@ static void format_permissions(FileInfo *file, char *buffer) {
     buffer[11] = '\0';
 }
 
-static void print_files_info(FileInfo **files, size_t count, const char *path, unsigned long total) {
+static void print_directory(DirectoryInfo directory, const char *path) {
     size_t buf_size = 4096;
     char *output_buf = malloc(buf_size);
+    if (!output_buf) {
+        return;
+    }
     size_t pos = 0;
 
     // Print header for recursive mode
     if (options & LIST) {
         if (options & RECURSE) {
-            pos += snprintf(output_buf + pos, buf_size - pos, "%s:\ntotal %lu\n", path, total);
+            pos += snprintf(output_buf + pos, buf_size - pos, "%s:\ntotal %lu\n", path, directory.total_blocks);
         } else {
-            pos += snprintf(output_buf + pos, buf_size - pos, "total %lu\n", total);
+            pos += snprintf(output_buf + pos, buf_size - pos, "total %lu\n", directory.total_blocks);
         }
     }
 
     // Process each file
-    for (size_t i = 0; i < count; i++) {
-        FileInfo *file = files[i];
-        char date_buf[13], perm_buf[12], name_buf[256];
+    for (size_t i = 0; i < directory.files_count; i++) {
+        FileInfo *file = directory.files[i];
+        char date_buf[64], perm_buf[64], name_buf[256];
         colored_name(file, name_buf, sizeof(name_buf));
 
         if (options & LIST) {
@@ -116,10 +119,10 @@ static void print_files_info(FileInfo **files, size_t count, const char *path, u
 
             // Format the line
             int line_len = snprintf(NULL, 0, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-                perm_buf, widths.blocks, file->stat.st_nlink,
-                widths.user, getpwuid(file->stat.st_uid)->pw_name,
-                widths.group, getgrgid(file->stat.st_gid)->gr_name,
-                widths.size, file->stat.st_size, date_buf, name_buf, 
+                perm_buf, directory.widths.blocks, file->stat.st_nlink,
+                directory.widths.user, getpwuid(file->stat.st_uid)->pw_name,
+                directory.widths.group, getgrgid(file->stat.st_gid)->gr_name,
+                directory.widths.size, file->stat.st_size, date_buf, name_buf, 
                 link_indicator, link_target);
 
             // Resize buffer if needed
@@ -131,14 +134,14 @@ static void print_files_info(FileInfo **files, size_t count, const char *path, u
             // Add to output buffer
             pos += snprintf(output_buf + pos, buf_size - pos, 
                 "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-                perm_buf, widths.blocks, file->stat.st_nlink,
-                widths.user, getpwuid(file->stat.st_uid)->pw_name,
-                widths.group, getgrgid(file->stat.st_gid)->gr_name,
-                widths.size, file->stat.st_size, date_buf, name_buf, 
+                perm_buf, directory.widths.blocks, file->stat.st_nlink,
+                directory.widths.user, getpwuid(file->stat.st_uid)->pw_name,
+                directory.widths.group, getgrgid(file->stat.st_gid)->gr_name,
+                directory.widths.size, file->stat.st_size, date_buf, name_buf, 
                 link_indicator, link_target);
         } else {
             pos += snprintf(output_buf + pos, buf_size - pos, "%s  ", name_buf);
-            if (count - 1 == i) {
+            if (directory.files_count - 1 == i) {
                 pos += snprintf(output_buf + pos, buf_size - pos, "\n");
             }
         }
@@ -163,26 +166,35 @@ static void free_files(FileInfo **files, size_t count) {
     free(files);
 }
 
-static DirectoryData read_directory(char *path) {
-    DirectoryData data = {0};
+static DirectoryInfo read_directory(char *path) {
+    DirectoryInfo data = {0};
     DIR *dir = opendir(path);
-    if (!dir) return (data);
+    if (!dir) {
+        return (data);
+    }
 
     size_t capacity = 16;
     data.files = malloc(capacity * sizeof(FileInfo *));
+    if (!data.files) {
+        return (data);
+    }
     unsigned long total_blocks = 0;
 
     // Process directory entries
     struct dirent *entry;
     while ((entry = readdir(dir)) != NULL) {
         // Skip hidden files unless -a option is set
-        if (!(options & ALL) && entry->d_name[0] == '.') continue;
+        if (!(options & ALL) && entry->d_name[0] == '.') {
+            continue;
+        }
 
         char full_path[1024];
         snprintf(full_path, sizeof(full_path), "%s/%s", path, entry->d_name);
 
         struct stat st;
-        if (lstat(full_path, &st) != 0) continue;
+        if (lstat(full_path, &st) != 0) {
+            continue;
+        }
 
         // Create file entry
         FileInfo *file = malloc(sizeof(FileInfo));
@@ -191,16 +203,15 @@ static DirectoryData read_directory(char *path) {
         file->stat = st;
 
         // Resize array if needed
-        if (data.count >= capacity) {
+        if (data.files_count >= capacity) {
             capacity *= 2;
             FileInfo **new_files = realloc(data.files, capacity * sizeof(FileInfo *));
             if (!new_files) {
-                perror("realloc");
                 break;
             }
             data.files = new_files;
         }
-        data.files[data.count++] = file;
+        data.files[data.files_count++] = file;
 
         // Update column widths and totals
         total_blocks += st.st_blocks / 2;
@@ -231,22 +242,26 @@ static DirectoryData read_directory(char *path) {
 
 static void process_directory(char *path) {
     // Read directory contents
-    DirectoryData data = read_directory(path);
-    if (!data.files) return;
+    DirectoryInfo data = read_directory(path);
+    if (!data.files) {
+        return;
+    }
     
     // Sort files
     if (options & TIME) {
-        quicksort(data.files, data.count, sizeof(FileInfo *), compare_file_mtime);
+        quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_mtime);
+    } else if (options & SIZE) {
+        quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_size);
     } else {
-        quicksort(data.files, data.count, sizeof(FileInfo *), compare_file_name);
+        quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_name);
     }
 
     // Print files
-    print_files_info(data.files, data.count, path, data.total_blocks);
+    print_directory(data, path);
     
     // Handle recursion
     if (options & RECURSE) {
-        for (size_t i = 0; i < data.count; i++) {
+        for (size_t i = 0; i < data.files_count; i++) {
             FileInfo *file = data.files[i];
             int is_special_dir = !ft_strcmp(file->name, ".") || !ft_strcmp(file->name, "..");
             
@@ -261,7 +276,7 @@ static void process_directory(char *path) {
         }
         free(data.files);
     } else {
-        free_files(data.files, data.count);
+        free_files(data.files, data.files_count);
     }
 }
 
@@ -283,47 +298,59 @@ static int process_options(int ac, char **av) {
                     case 'r': options |= REVERSE; break;
                     case 'a': options |= ALL; break;
                     case 't': options |= TIME; break;
+                    case 'S': options |= SIZE; break;
                     default:
                         fprintf(stderr, "Invalid option: '%c'\n", *opt);
-                        return -1;
+                        return (-1);
                 }
                 opt++;
             }
         }
     }
-    return 0;
+    return (0);
 }
 
 static int process_names(int ac, char **av, char ***names) {
     *names = malloc((ac - 1) * sizeof(char *));
-    if (!*names) return -1;
+    if (!*names) {
+        return (-1);
+    }
     
     int count = 0;
     int process_flag = 1;
     
     for (int i = 1; i < ac; i++) {
         if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
-            if (ft_strcmp(av[i], "--") == 0) process_flag = 0;
+            if (ft_strcmp(av[i], "--") == 0) {
+                process_flag = 0;
+            }
         } else {
             (*names)[count++] = av[i];
         }
     }
-    return count;
+    return (count);
 }
 
 int main(int ac, char **av) {
     char **names = NULL;
     int names_count;
     
-    if (process_options(ac, av) != 0) return EXIT_FAILURE;
+    if (process_options(ac, av) != 0) {
+        return (EXIT_FAILURE);
+    }
+
     names_count = process_names(ac, av, &names);
-    if (names_count == -1) return EXIT_FAILURE;
+    if (names_count == -1) {
+        return (EXIT_FAILURE);
+    }
     
     if (names_count > 0) {
         quicksort(names, names_count, sizeof(char *), compare_name);
 
         for (int i = 0; i < names_count; i++) {
-            if (i != 0) printf("\n");
+            if (i != 0) {
+                printf("\n");
+            }
             process_directory(names[i]);
         }
     } else {
@@ -331,5 +358,5 @@ int main(int ac, char **av) {
     }
     
     free(names);
-    return EXIT_SUCCESS;
+    return (EXIT_SUCCESS);
 }
