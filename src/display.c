@@ -2,15 +2,23 @@
 
 extern Options options;
 
-void get_colored_name(const FileInfo *file, char *buffer, size_t buffer_size) {
-	const char *color = RESET;
-	
-	if (S_ISDIR(file->stat.st_mode))        color = BLUE;
-	else if (S_ISFIFO(file->stat.st_mode))  color = CYAN;
-	else if (S_ISLNK(file->stat.st_mode))   color = CYAN;
-	else if (file->stat.st_mode & S_IXUSR)  color = GREEN;
+static const char *get_color_by_mode(mode_t mode) {
+	if (S_ISDIR(mode))        return BLUE;
+	else if (S_ISFIFO(mode))  return CYAN;
+	else if (S_ISLNK(mode))   return CYAN;
+	else if (mode & S_IXUSR)  return GREEN;
+	else                      return RESET;
+}
 
-	snprintf(buffer, buffer_size, "%s%s%s", color, file->name, RESET);
+static void get_colored_name(const FileInfo *file, char *buffer, size_t buffer_size) {
+	snprintf(
+        buffer,
+        buffer_size,
+        "%s%s%s",
+        get_color_by_mode(file->stat.st_mode),
+        file->name,
+        RESET
+    );
 }
 
 int get_terminal_width(void) {
@@ -252,7 +260,7 @@ void format_permissions(FileInfo *file, char *buffer) {
 		((mode & S_ISVTX) ? 't' : 'x') :
 		((mode & S_ISVTX) ? 'T' : '-');
 
-	buffer[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : ' ';
+	buffer[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : '\0';
 	buffer[11] = '\0';
 }
 
@@ -275,20 +283,30 @@ void print_list_formatted(DirectoryInfo directory) {
 		const char *username = pwd ? pwd->pw_name : "unknown";
 		const char *groupname = grp ? grp->gr_name : "unknown";
 
-		const char *link_indicator = file->link_name ? " -> " : "";
+		const char *link_indicator = file->link_name ? "->" : "";
 		const char *link_target = file->link_name ? file->link_name : "";
+		char colored_target[256] = {0};
+
+		if (file->link_name) {
+			struct stat target_stat;
+			const char *color = RESET;
+			
+			if (stat(file->link_name, &target_stat) == 0) {
+				color = get_color_by_mode(target_stat.st_mode);
+			}
+			snprintf(colored_target, sizeof(colored_target), "%s%s%s", color, file->link_name, RESET);
+			link_target = colored_target;
+		}
 
 		if (options & LIST_GROUP_ONLY) {
-			// -g option: show long format but without owner
-			append_to_buffer(sb, "%s %*ld %-*s %*lu %s %s%s%s\n",
-				perm_buf, directory.widths.blocks, file->stat.st_nlink,
+			append_to_buffer(sb, "%s %*ld %-*s %*lu %s %s %s %s\n",
+				perm_buf, directory.widths.nlink, file->stat.st_nlink,
 				directory.widths.group, groupname,
 				directory.widths.size, file->stat.st_size, date_buf, name_buf,
 				link_indicator, link_target);
 		} else {
-			// -l option: show full long format with owner
-			append_to_buffer(sb, "%s %*ld %-*s %-*s %*lu %s %s%s%s\n",
-				perm_buf, directory.widths.blocks, file->stat.st_nlink,
+			append_to_buffer(sb, "%s %*ld %-*s %-*s %*lu %s %s %s %s\n",
+				perm_buf, directory.widths.nlink, file->stat.st_nlink,
 				directory.widths.user, username,
 				directory.widths.group, groupname,
 				directory.widths.size, file->stat.st_size, date_buf, name_buf,

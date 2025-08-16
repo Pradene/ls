@@ -19,7 +19,7 @@ typedef struct {
 }   FileInfo;
 
 typedef struct {
-	int blocks;
+	int nlink;
 	int size;
 	int group;
 	int user;

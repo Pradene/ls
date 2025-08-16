@@ -19,6 +19,7 @@ int process_options(int ac, char **av) {
                         case 'g': options |= LIST_GROUP_ONLY; break;
 						case 'R': options |= RECURSE; break;
 						case 'r': options |= REVERSE; break;
+						case 'd': options |= DIRECTORY; break;
 						case 'a': show_type = SHOW_ALL; break;
 						case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
 						case 'A': show_type = SHOW_ALMOST_ALL; break;

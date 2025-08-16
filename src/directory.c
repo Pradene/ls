@@ -13,7 +13,7 @@ static inline int number_len(long long n) {
 	
 	int count = 0;
 	if (n < 0) {
-		count = 1; // For minus sign
+		count = 1;
 		n = -n;
 	}
 	
@@ -27,11 +27,11 @@ static inline int number_len(long long n) {
 int should_skip_file(const char *name, ShowType show_type) {
 	int is_hidden = (name[0] == '.');
 	int is_special_dir = (!ft_strcmp(name, ".") || !ft_strcmp(name, ".."));
-	
-	switch (show_type) {
-		case SHOW_NORMAL:      return (is_hidden);
-		case SHOW_ALMOST_ALL:  return (is_special_dir);
+    
+    switch (show_type) {
 		case SHOW_ALL:         return (0);
+        case SHOW_ALMOST_ALL:  return (is_special_dir);
+        case SHOW_NORMAL:
 		default:               return (is_hidden);
 	}
 }
@@ -75,7 +75,7 @@ void update_directory_stats(DirectoryInfo *data, FileInfo *file) {
 	const char *group = grp ? grp->gr_name : "unknown";
 
 	data->total_blocks += file->stat.st_blocks / 2;
-	data->widths.blocks = MAX(data->widths.blocks, number_len(file->stat.st_nlink));
+	data->widths.nlink = MAX(data->widths.nlink, number_len(file->stat.st_nlink));
 	data->widths.size = MAX(data->widths.size, number_len(file->stat.st_size));
 	data->widths.user = MAX(data->widths.user, ft_strlen(user));
 	data->widths.group = MAX(data->widths.group, ft_strlen(group));

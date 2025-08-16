@@ -10,6 +10,7 @@ typedef enum {
 	LIST_GROUP_ONLY = 1 << 1,  // -g flag
 	RECURSE	        = 1 << 2,  // -R flag
 	REVERSE	        = 1 << 3,  // -r flag
+	DIRECTORY	    = 1 << 4,  // -d flag
 }   Options;
 
 typedef enum {
