@@ -45,6 +45,27 @@ typedef struct {
     ColumnWidths    widths;
 }   DirectoryInfo;
 
+
+typedef struct {
+	char **display_names;
+	int *widths;
+	size_t count;
+}   DisplayData;
+
+typedef struct {
+	int cols;
+	int rows;
+	int *col_widths;
+	int total_width;
+	int valid;
+}   LayoutInfo;
+
+typedef struct {
+	char *buffer;
+	size_t size;
+	size_t pos;
+}   StringBuffer;
+
 typedef enum {
     NONE    = 0,
     LIST    = 1 << 0,
