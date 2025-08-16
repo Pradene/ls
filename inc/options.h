@@ -1,0 +1,31 @@
+#ifndef OPTIONS_H
+# define OPTIONS_H
+
+# include <stdio.h>
+# include <stdlib.h>
+
+typedef enum {
+	NONE	        = 0,
+	LIST	        = 1 << 0,  // -l flag
+	LIST_GROUP_ONLY = 1 << 1,  // -g flag
+	RECURSE	        = 1 << 2,  // -R flag
+	REVERSE	        = 1 << 3,  // -r flag
+}   Options;
+
+typedef enum {
+	SORT_NAME,  // Default sorting
+	SORT_TIME,  // -t flag
+	SORT_SIZE,  // -S flag
+	SORT_NONE,  // -U flag
+}   SortType;
+
+typedef enum {
+	SHOW_NORMAL,      // Default: hide hidden files
+	SHOW_ALL,         // -a flag: show all including . and ..
+	SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
+}   ShowType;
+
+int process_options(int ac, char **av);
+int process_names(int ac, char **av, char ***names);
+
+#endif
