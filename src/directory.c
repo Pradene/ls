@@ -168,6 +168,10 @@ void process_directory(char *path) {
 		default: quicksort(data.files, data.files_count, sizeof(FileInfo *), compare_file_name); break;
 	}
 
+    if (options & REVERSE) {
+		reverse(data.files, data.files_count, sizeof(FileInfo *));
+	}
+
 	print_directory(data, path);
 	
 	// Handle recursion

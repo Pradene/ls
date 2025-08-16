@@ -19,6 +19,9 @@ int main(int ac, char **av) {
 	
 	if (names_count > 0) {
 		quicksort(names, names_count, sizeof(char *), compare_name);
+		if (options & REVERSE) {
+			reverse(names, names_count, sizeof(char *));
+		}
 
 		for (int i = 0; i < names_count; i++) {
 			if (i != 0) printf("\n");
