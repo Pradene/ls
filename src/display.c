@@ -2,6 +2,26 @@
 
 extern Options options;
 
+# define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
+static inline int number_len(long long n) {
+	if (n == 0) {
+		return (1);
+	}
+	
+	int count = 0;
+	if (n < 0) {
+		count = 1;
+		n = -n;
+	}
+	
+	while (n > 0) {
+		n /= 10;
+		count++;
+	}
+	return (count);
+}
+
 static const char *get_color_by_mode(mode_t mode) {
 	if (S_ISDIR(mode))        return BLUE;
 	else if (S_ISFIFO(mode))  return CYAN;
@@ -12,13 +32,13 @@ static const char *get_color_by_mode(mode_t mode) {
 
 static void get_colored_name(const FileInfo *file, char *buffer, size_t buffer_size) {
 	snprintf(
-        buffer,
-        buffer_size,
-        "%s%s%s",
-        get_color_by_mode(file->stat.st_mode),
-        file->name,
-        RESET
-    );
+		buffer,
+		buffer_size,
+		"%s%s%s",
+		get_color_by_mode(file->stat.st_mode),
+		file->name,
+		RESET
+	);
 }
 
 int get_terminal_width(void) {
@@ -264,12 +284,34 @@ void format_permissions(FileInfo *file, char *buffer) {
 	buffer[11] = '\0';
 }
 
+ColumnWidths get_list_format(DirectoryInfo data) {
+	ColumnWidths widths = {0};
+
+	for (size_t i = 0; i < data.files_count; ++i) {
+		FileInfo *file = data.files[i];
+
+		struct passwd *usr = getpwuid(file->stat.st_uid);
+		const char *user = usr ? usr->pw_name : "unknown";
+
+		struct group *grp = getgrgid(file->stat.st_gid);
+		const char *group = grp ? grp->gr_name : "unknown";
+		
+		widths.nlink = MAX(widths.nlink, number_len(file->stat.st_nlink));
+		widths.size = MAX(widths.size, number_len(file->stat.st_size));
+		widths.user = MAX(widths.user, ft_strlen(user));
+		widths.group = MAX(widths.group, ft_strlen(group));
+	}
+
+	return (widths);
+}
+
 void print_list_formatted(DirectoryInfo directory) {
 	StringBuffer *sb = create_string_buffer(4096);
 	if (!sb) {
 		return;
 	}
 
+	ColumnWidths widths = get_list_format(directory);
 	for (size_t i = 0; i < directory.files_count; i++) {
 		FileInfo *file = directory.files[i];
 		char date_buf[64], perm_buf[64], name_buf[256];
@@ -299,18 +341,24 @@ void print_list_formatted(DirectoryInfo directory) {
 		}
 
 		if (options & LIST_GROUP_ONLY) {
-			append_to_buffer(sb, "%s %*ld %-*s %*lu %s %s %s %s\n",
-				perm_buf, directory.widths.nlink, file->stat.st_nlink,
-				directory.widths.group, groupname,
-				directory.widths.size, file->stat.st_size, date_buf, name_buf,
-				link_indicator, link_target);
+			append_to_buffer(
+				sb, "%s %*ld %-*s %*lu %s %s %s %s\n",
+				perm_buf, widths.nlink, file->stat.st_nlink,
+				widths.group, groupname,
+				widths.size, file->stat.st_size,
+				date_buf, name_buf,
+				link_indicator, link_target
+			);
 		} else {
-			append_to_buffer(sb, "%s %*ld %-*s %-*s %*lu %s %s %s %s\n",
-				perm_buf, directory.widths.nlink, file->stat.st_nlink,
-				directory.widths.user, username,
-				directory.widths.group, groupname,
-				directory.widths.size, file->stat.st_size, date_buf, name_buf,
-				link_indicator, link_target);
+			append_to_buffer(
+				sb, "%s %*ld %-*s %-*s %*lu %s %s %s %s\n",
+				perm_buf, widths.nlink, file->stat.st_nlink,
+				widths.user, username,
+				widths.group, groupname,
+				widths.size, file->stat.st_size,
+				date_buf, name_buf,
+				link_indicator, link_target
+			);
 		}
 	}
 

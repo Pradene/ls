@@ -34,7 +34,6 @@ typedef struct {
 
 int             should_skip_file(const char *name, ShowType show_type);
 FileInfo        *create_file_info(const char *name, const char *full_path, struct stat *st);
-void            update_directory_stats(DirectoryInfo *data, FileInfo *file);
 DirectoryInfo   read_directory(char *path);
 void            process_directory(char *path);
 void            free_file(FileInfo *file);

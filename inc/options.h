@@ -21,7 +21,7 @@ typedef enum {
 }   SortType;
 
 typedef enum {
-	SHOW_NORMAL,      // Default: hide hidden files
+	SHOW_VISIBLE,      // Default: hide hidden files
 	SHOW_ALL,         // -a flag: show all including . and ..
 	SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
 }   ShowType;

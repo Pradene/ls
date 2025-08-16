@@ -2,7 +2,7 @@
 
 Options options = NONE;
 SortType sort_type = SORT_NAME;
-ShowType show_type = SHOW_NORMAL;
+ShowType show_type = SHOW_VISIBLE;
 
 int main(int ac, char **av) {
 	char **names = NULL;

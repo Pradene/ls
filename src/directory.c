@@ -4,26 +4,6 @@ extern Options options;
 extern SortType sort_type;
 extern ShowType show_type;
 
-# define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
-
-static inline int number_len(long long n) {
-	if (n == 0) {
-		return (1);
-	}
-	
-	int count = 0;
-	if (n < 0) {
-		count = 1;
-		n = -n;
-	}
-	
-	while (n > 0) {
-		n /= 10;
-		count++;
-	}
-	return (count);
-}
-
 int should_skip_file(const char *name, ShowType show_type) {
 	int is_hidden = (name[0] == '.');
 	int is_special_dir = (!ft_strcmp(name, ".") || !ft_strcmp(name, ".."));
@@ -31,7 +11,7 @@ int should_skip_file(const char *name, ShowType show_type) {
     switch (show_type) {
 		case SHOW_ALL:         return (0);
         case SHOW_ALMOST_ALL:  return (is_special_dir);
-        case SHOW_NORMAL:
+        case SHOW_VISIBLE:
 		default:               return (is_hidden);
 	}
 }
@@ -51,7 +31,6 @@ FileInfo *create_file_info(const char *name, const char *full_path, struct stat 
 	file->link_name = NULL;
 	file->stat = *st;
 	
-	// Handle symlinks
 	if (S_ISLNK(st->st_mode)) {
 		char *link_target = malloc(1024);
 		if (link_target) {
@@ -66,19 +45,6 @@ FileInfo *create_file_info(const char *name, const char *full_path, struct stat 
 	}
 	
 	return (file);
-}
-
-void update_directory_stats(DirectoryInfo *data, FileInfo *file) {
-	struct passwd *pwd = getpwuid(file->stat.st_uid);
-	struct group *grp = getgrgid(file->stat.st_gid);
-	const char *user = pwd ? pwd->pw_name : "unknown";
-	const char *group = grp ? grp->gr_name : "unknown";
-
-	data->total_blocks += file->stat.st_blocks / 2;
-	data->widths.nlink = MAX(data->widths.nlink, number_len(file->stat.st_nlink));
-	data->widths.size = MAX(data->widths.size, number_len(file->stat.st_size));
-	data->widths.user = MAX(data->widths.user, ft_strlen(user));
-	data->widths.group = MAX(data->widths.group, ft_strlen(group));
 }
 
 DirectoryInfo read_directory(char *path) {
@@ -133,7 +99,6 @@ DirectoryInfo read_directory(char *path) {
 		}
 
 		data.files[data.files_count++] = file;
-		update_directory_stats(&data, file);
 	}
 
 	closedir(dir);
