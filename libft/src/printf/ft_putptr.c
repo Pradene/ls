@@ -1,6 +1,6 @@
 #include "libft.h"
 
-int ft_putptr_formatted(unsigned long long n, t_printformat *fmt) {
+int ft_putptr_formatted(unsigned long long n, PrintFormat *fmt) {
 	int printed = 0;
 	int hex_len = 0;
 	unsigned long long temp = n;

@@ -1,6 +1,6 @@
 #include "libft.h"
 
-int ft_putsize_t_formatted(size_t n, t_printformat *fmt) {	
+int ft_putsize_t_formatted(size_t n, PrintFormat *fmt) {	
 	// Calculate length
 	size_t temp = n;
 	int len = 0;

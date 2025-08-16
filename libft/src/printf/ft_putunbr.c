@@ -11,7 +11,7 @@ static int put_unsigned_digits(unsigned int n) {
 	return (printed + 1);
 }
 
-int ft_putunbr_formatted(unsigned int n, t_printformat *fmt) {
+int ft_putunbr_formatted(unsigned int n, PrintFormat *fmt) {
 	int size = 0;
 	int len = 0;
 	unsigned int temp = n;

@@ -1,7 +1,7 @@
 #include "libft.h"
 
-void	ft_lstclear(t_list **lst, void (*del)(void *)) {
-	t_list	*p;
+void	ft_lstclear(List **lst, void (*del)(void *)) {
+	List	*p;
 
 	if (lst && del) {
 		p = *lst;

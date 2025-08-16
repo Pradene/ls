@@ -1,6 +1,6 @@
 #include "libft.h"
 
-int	ft_putstr_formatted(char *s, t_printformat *fmt) {
+int	ft_putstr_formatted(char *s, PrintFormat *fmt) {
 	int len;
 	int size = 0;
 	

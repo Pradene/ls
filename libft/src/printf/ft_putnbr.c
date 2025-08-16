@@ -12,7 +12,7 @@ static int put_digits(unsigned int num) {
 	return (printed + 1);
 }
 
-int ft_putnbr_formatted(int n, t_printformat *fmt) {
+int ft_putnbr_formatted(int n, PrintFormat *fmt) {
 	int printed = 0;
 	int is_negative = (n < 0);
 	unsigned int num = (is_negative) ? -n : n;

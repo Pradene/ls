@@ -1,6 +1,6 @@
 #include "libft.h"
 
-int	ft_putformated(va_list params, t_printformat *fmt, char c) {
+int	ft_putformated(va_list params, PrintFormat *fmt, char c) {
 	int	printed = 0;
 
 	if (c == 'c') {
@@ -26,7 +26,7 @@ int	ft_putformated(va_list params, t_printformat *fmt, char c) {
 
 int ft_printf(const char *s, ...) {
 	va_list params;
-	t_printformat fmt;
+	PrintFormat fmt;
 	int printed = 0;
 	int i = 0;
 

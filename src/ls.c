@@ -558,24 +558,23 @@ static int process_options(int ac, char **av) {
 		if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
 			if (ft_strcmp(av[i], "--") == 0) {
 				process_flag = 0;
-				continue;
-			}
-			
-			char *opt = av[i];
-			while (*(++opt)) {
-				switch (*opt) {
-					case 'l': options |= LIST; break;
-					case 'R': options |= RECURSE; break;
-					case 'r': options |= REVERSE; break;
-					case 'a': show_type = SHOW_ALL; break;
-					case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
-					case 'A': show_type = SHOW_ALMOST_ALL; break;
-					case 't': sort_type = SORT_TIME; break;
-					case 'S': sort_type = SORT_SIZE; break;
-					case 'U': sort_type = SORT_NONE; break;
-					default:
-						fprintf(stderr, "Invalid option: '%c'\n", *opt);
-						return (-1);
+			} else {
+				char *opt = av[i];
+				while (*(++opt)) {
+					switch (*opt) {
+						case 'l': options |= LIST; break;
+						case 'R': options |= RECURSE; break;
+						case 'r': options |= REVERSE; break;
+						case 'a': show_type = SHOW_ALL; break;
+						case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
+						case 'A': show_type = SHOW_ALMOST_ALL; break;
+						case 't': sort_type = SORT_TIME; break;
+						case 'S': sort_type = SORT_SIZE; break;
+						case 'U': sort_type = SORT_NONE; break;
+						default:
+							fprintf(stderr, "Invalid option: '%c'\n", *opt);
+							return (-1);
+					}
 				}
 			}
 		}

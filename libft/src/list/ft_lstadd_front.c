@@ -1,6 +1,6 @@
 #include "libft.h"
 
-void	ft_lstadd_front(t_list **lst, t_list *new) {
+void	ft_lstadd_front(List **lst, List *new) {
 	if (lst) {
 		if (*lst) {
 			new->next = *lst;

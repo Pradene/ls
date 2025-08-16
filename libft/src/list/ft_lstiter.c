@@ -1,6 +1,6 @@
 #include "libft.h"
 
-void	ft_lstiter(t_list *lst, void (*f)(void *)) {
+void	ft_lstiter(List *lst, void (*f)(void *)) {
 	if (!lst) {
 		return ;
 	}

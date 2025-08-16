@@ -28,7 +28,7 @@ int ft_puthex(unsigned long long n, char c) {
 	}
 }
 
-int ft_puthex_formatted(unsigned long long n, t_printformat *fmt, char c) {
+int ft_puthex_formatted(unsigned long long n, PrintFormat *fmt, char c) {
 	int printed = 0;
 	int len = 0;
 	unsigned long long temp = n;

@@ -1,6 +1,6 @@
 #include "libft.h"
 
-void format_init(t_printformat *fmt) {
+void format_init(PrintFormat *fmt) {
 	fmt->width = 0;
 	fmt->space = 0;
 	fmt->minus = 0;
@@ -13,7 +13,7 @@ static bool format_is_flag(char c) {
 	return (c == '-' || c == '0' || c == '#' || c == ' ' || c == '+');
 }
 
-void format_parse_flags(const char *s, int *i, t_printformat *fmt) {
+void format_parse_flags(const char *s, int *i, PrintFormat *fmt) {
 	while (s[*i] && format_is_flag(s[*i])) {
 		if (s[*i] == '-') { fmt->minus = 1; } 
 		else if (s[*i] == '0') { fmt->zero = 1; }

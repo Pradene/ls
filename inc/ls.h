@@ -26,30 +26,30 @@
 # define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
 
 typedef struct {
-    char            *link_name;
-    char            *name;
-    struct stat     stat;
+	char		*link_name;
+	char		*name;
+	struct stat	stat;
 }   FileInfo;
 
 typedef struct {
-    int blocks;   // for st_nlink
-    int size;     // for st_size
-    int group;    // for group name
-    int user;     // for user name
+	int blocks;	// for st_nlink
+	int size;	// for st_size
+	int group;	// for group name
+	int user;	// for user name
 }   ColumnWidths;
 
 typedef struct {
-    FileInfo        **files;
-    size_t          files_count;
-    unsigned long   total_blocks;
-    ColumnWidths    widths;
+	FileInfo		**files;
+	size_t			files_count;
+	unsigned long	total_blocks;
+	ColumnWidths	widths;
 }   DirectoryInfo;
 
 
 typedef struct {
-	char **display_names;
-	int *widths;
-	size_t count;
+	char	**display_names;
+	int		*widths;
+	size_t	count;
 }   DisplayData;
 
 typedef struct {
@@ -61,34 +61,32 @@ typedef struct {
 }   LayoutInfo;
 
 typedef struct {
-	char *buffer;
-	size_t size;
-	size_t pos;
+	char	*buffer;
+	size_t	size;
+	size_t	pos;
 }   StringBuffer;
 
 typedef enum {
-    NONE    = 0,
-    LIST    = 1 << 0,
-    RECURSE = 1 << 1,
-    REVERSE = 1 << 2,
+	NONE	= 0,
+	LIST	= 1 << 0,  // -l flag
+	RECURSE	= 1 << 1,  // -R flag
+	REVERSE	= 1 << 2,  // -r flag
 }   Options;
 
 typedef enum {
-    SORT_NAME,  // Default sorting
-    SORT_TIME,  // -t flag
-    SORT_SIZE,  // -S flag
-    SORT_NONE,  // -U flag
+	SORT_NAME,  // Default sorting
+	SORT_TIME,  // -t flag
+	SORT_SIZE,  // -S flag
+	SORT_NONE,  // -U flag
 }   SortType;
 
 typedef enum {
-    SHOW_NORMAL,      // Default: hide hidden files
-    SHOW_ALL,         // -a flag: show all including . and ..
-    SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
+	SHOW_NORMAL,      // Default: hide hidden files
+	SHOW_ALL,         // -a flag: show all including . and ..
+	SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
 }   ShowType;
 
 int ls(char *path);
-
-void quicksort(void *base, size_t nmemb, size_t size, int (*comp)(const void *, const void *));
 
 int compare_name(const void *a, const void *b);
 int compare_file_name(const void *a, const void *b);

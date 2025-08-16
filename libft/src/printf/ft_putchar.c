@@ -1,6 +1,6 @@
 #include "libft.h"
 
-int ft_putchar_formatted(char c, t_printformat *fmt) {
+int ft_putchar_formatted(char c, PrintFormat *fmt) {
 	int printed = 0;
 	int padding = fmt->width - 1;
 	
