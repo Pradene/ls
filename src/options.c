@@ -5,18 +5,18 @@ extern SortType sort_type;
 extern ShowType show_type;
 
 int process_options(int ac, char **av) {
-	int process_flag = 1;
+	bool process_flag = true;
 	
 	for (int i = 1; i < ac; i++) {
-		if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
+		if (process_flag == true && av[i][0] == '-' && av[i][1] != '\0') {
 			if (ft_strcmp(av[i], "--") == 0) {
-				process_flag = 0;
+				process_flag = false;
 			} else {
 				char *opt = av[i];
 				while (*(++opt)) {
 					switch (*opt) {
 						case 'l': options |= LIST; break;
-                        case 'g': options |= LIST_GROUP_ONLY; break;
+						case 'g': options |= LIST_GROUP_ONLY; break;
 						case 'R': options |= RECURSE; break;
 						case 'r': options |= REVERSE; break;
 						case 'd': options |= DIRECTORY; break;
@@ -38,19 +38,19 @@ int process_options(int ac, char **av) {
 }
 
 int process_names(int ac, char **av, char ***names) {
-	*names = malloc((ac - 1) * sizeof(char *));
-	if (!*names) {
+	(*names) = malloc((ac - 1) * sizeof(char *));
+	if ((*names) == NULL) {
 		fprintf(stderr, "malloc failed\n");
 		return (-1);
 	}
 	
 	int count = 0;
-	int process_flag = 1;
+	bool process_flag = true;
 	
 	for (int i = 1; i < ac; i++) {
-		if (process_flag && av[i][0] == '-' && av[i][1] != '\0') {
+		if (process_flag == true && av[i][0] == '-' && av[i][1] != '\0') {
 			if (ft_strcmp(av[i], "--") == 0) {
-				process_flag = 0;
+				process_flag = false;
 			}
 		} else {
 			(*names)[count++] = av[i];

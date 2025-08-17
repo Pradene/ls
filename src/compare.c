@@ -2,16 +2,16 @@
 
 int compare_file_name(const void *a, const void *b) {
 	if (!a || !b) return (0);
-		
+
 	const FileInfo *file_a = *(const FileInfo **)a;
 	const FileInfo *file_b = *(const FileInfo **)b;
-		
+
 	if (!file_a || !file_b) return (0);
 	if (!file_a->name || !file_b->name) return (0);
-		
+
 	char *t1 = ft_strdup(file_a->name);
 	char *t2 = ft_strdup(file_b->name);
-	
+
 	if (!t1 || !t2) {
 		if (t1) free(t1);
 		if (t2) free(t2);
@@ -25,7 +25,7 @@ int compare_file_name(const void *a, const void *b) {
 
 	free(t1);
 	free(t2);
-	
+
 	return (result);
 }
 

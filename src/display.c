@@ -23,11 +23,11 @@ static inline int number_len(long long n) {
 }
 
 static const char *get_color_by_mode(mode_t mode) {
-	if (S_ISDIR(mode))        return BLUE;
-	else if (S_ISFIFO(mode))  return CYAN;
-	else if (S_ISLNK(mode))   return CYAN;
-	else if (mode & S_IXUSR)  return GREEN;
-	else                      return RESET;
+	if (S_ISDIR(mode))   return BLUE;
+	if (S_ISFIFO(mode))  return CYAN;
+	if (S_ISLNK(mode))   return CYAN;
+	if (mode & S_IXUSR)  return GREEN;
+	return RESET;
 }
 
 static void get_colored_name(const FileInfo *file, char *buffer, size_t buffer_size) {
@@ -46,19 +46,19 @@ int get_terminal_width(void) {
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0) {
 		return (w.ws_col);
 	}
-	return (80); // Default width
+	return (80);
 }
 
 int get_display_width(const char *str) {
 	int width = 0;
-	int in_escape = 0;
+	bool in_escape = false;
 	
 	for (int i = 0; str[i]; i++) {
 		if (str[i] == '\x1B') {
-			in_escape = 1;
-		} else if (in_escape && str[i] == 'm') {
-			in_escape = 0;
-		} else if (!in_escape) {
+			in_escape = true;
+		} else if (in_escape == true && str[i] == 'm') {
+			in_escape = false;
+		} else if (in_escape == false) {
 			width++;
 		}
 	}
@@ -67,7 +67,7 @@ int get_display_width(const char *str) {
 
 static DisplayData *create_display_data(DirectoryInfo directory) {
 	DisplayData *data = malloc(sizeof(DisplayData));
-	if (!data) {
+	if (data == NULL) {
 		return (NULL);
 	}
 	
@@ -75,7 +75,7 @@ static DisplayData *create_display_data(DirectoryInfo directory) {
 	data->display_names = malloc(data->count * sizeof(char *));
 	data->widths = malloc(data->count * sizeof(int));
 	
-	if (!data->display_names || !data->widths) {
+	if (data->display_names == NULL || data->widths == NULL) {
 		free(data->display_names);
 		free(data->widths);
 		free(data);
@@ -84,7 +84,7 @@ static DisplayData *create_display_data(DirectoryInfo directory) {
 	
 	for (size_t i = 0; i < data->count; i++) {
 		data->display_names[i] = malloc(256);
-		if (!data->display_names[i]) {
+		if (data->display_names[i] == NULL) {
 			for (size_t j = 0; j < i; j++) {
 				free(data->display_names[j]);
 			}
@@ -102,7 +102,7 @@ static DisplayData *create_display_data(DirectoryInfo directory) {
 }
 
 static void free_display_data(DisplayData *data) {
-	if (!data) return;
+	if (data == NULL) return;
 	
 	if (data->display_names) {
 		for (size_t i = 0; i < data->count; i++) {
@@ -121,7 +121,7 @@ static LayoutInfo calculate_layout(DisplayData *data, int cols, int term_width) 
 	layout.col_widths = malloc(sizeof(int) * cols);
 	layout.valid = 1;
 	
-	if (!layout.col_widths) {
+	if (layout.col_widths == NULL) {
 		layout.valid = 0;
 		return (layout);
 	}
@@ -160,7 +160,7 @@ static LayoutInfo find_best_layout(DisplayData *data, int term_width) {
 		
 		if (current.valid && 
 			(current.rows < best_layout.rows || 
-			 (current.rows == best_layout.rows && current.cols > best_layout.cols))) {
+			(current.rows == best_layout.rows && current.cols > best_layout.cols))) {
 			
 			free(best_layout.col_widths);
 			best_layout = current;
@@ -203,7 +203,7 @@ void print_formatted(DirectoryInfo directory) {
 	}
 	
 	DisplayData *data = create_display_data(directory);
-	if (!data) {
+	if (data == NULL) {
 		fprintf(stderr, "Failed to create display data\n");
 		return;
 	}
@@ -229,7 +229,7 @@ void format_date(const FileInfo *file, char *buffer) {
 	};
 	
 	const time_t six_months = 180 * 24 * 60 * 60;
-	int is_recent = (file_time >= now - six_months) && 
+	bool is_recent = (file_time >= now - six_months) && 
 					(file_time <= now + six_months) &&
 					(file_tm->tm_year == now_tm->tm_year);
 
@@ -307,7 +307,7 @@ ColumnWidths get_list_format(DirectoryInfo data) {
 
 void print_list_formatted(DirectoryInfo directory) {
 	StringBuffer *sb = create_string_buffer(4096);
-	if (!sb) {
+	if (sb == NULL) {
 		return;
 	}
 
