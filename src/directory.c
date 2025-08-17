@@ -47,11 +47,11 @@ static char *build_path(const char *dir_path, const char *filename) {
 		return (NULL);
 	}
 	
-	strcpy(full_path, dir_path);
+	ft_strcpy(full_path, dir_path);
 	if (dir_path[dir_len - 1] != '/') {
-		strcat(full_path, "/");
+		ft_strcat(full_path, "/");
 	}
-	strcat(full_path, filename);
+	ft_strcat(full_path, filename);
 	
 	return (full_path);
 }
@@ -114,26 +114,24 @@ static bool add_file_to_array(DynamicArray *arr, const char *entry_name, const c
 	return (true);
 }
 
-static DirectoryInfo read_directory(char *path) {
-	DirectoryInfo data = {0};
-	
-	data.path = ft_strdup(path);
-	if (data.path == NULL) {
-		return ((DirectoryInfo){0});
+static bool read_directory(char *path, DirectoryInfo *data) {	
+	data->path = ft_strdup(path);
+	if (data->path == NULL) {
+		return (false);
 	}
 
 	DynamicArray *arr = da_create(16);
 	if (!arr) {
-		free(data.path);
-		return ((DirectoryInfo){0});
+		free(data->path);
+		return (false);
 	}
 
 	DIR *dir = opendir(path);
 	if (dir == NULL) {
 		da_destroy(arr, free_file);
-		free(data.path);
+		free(data->path);
 		fprintf(stderr, "opendir failed\n");
-		return ((DirectoryInfo){0});
+		return (false);
 	}
 
 	struct dirent *entry;
@@ -144,19 +142,19 @@ static DirectoryInfo read_directory(char *path) {
 
 		if (!add_file_to_array(arr, entry->d_name, path)) {
 			da_destroy(arr, free_file);
-			free(data.path);
+			free(data->path);
 			closedir(dir);
 			fprintf(stderr, "Failed to add file to directory\n");
-			return ((DirectoryInfo){0});
+			return (false);
 		}
 	}
 
 	closedir(dir);
 	
-	data.files_count = arr->size;
-	data.files = (FileInfo **)da_release(arr);
+	data->files_count = arr->size;
+	data->files = (FileInfo **)da_release(arr);
 	
-	return (data);
+	return (true);
 }
 
 static size_t get_total_blocks(DirectoryInfo *data) {
@@ -211,11 +209,8 @@ static void sort_directory(DirectoryInfo *data) {
 }
 
 void process_directory(char *path) {
-	DirectoryInfo data = read_directory(path);
-	if (data.files == NULL) {
-		return;
-	}
-
+	DirectoryInfo data = {0};
+	if (read_directory(path, &data) == false) return;
 	sort_directory(&data);
 	print_directory(&data);
 	free_directory(&data);

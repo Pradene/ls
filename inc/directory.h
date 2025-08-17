@@ -5,7 +5,6 @@
 # include <stdbool.h>
 # include <stdio.h>
 # include <stdlib.h>
-# include <string.h>
 # include <dirent.h>
 # include <unistd.h>
 # include <pwd.h>
@@ -20,9 +19,9 @@ typedef struct {
 }   FileInfo;
 
 typedef struct {
-	char			*path;
-	FileInfo		**files;
-	size_t			files_count;
+	char		*path;
+	FileInfo	**files;
+	size_t		files_count;
 }   DirectoryInfo;
 
 void            process_directory(char *path);
