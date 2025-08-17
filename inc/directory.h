@@ -5,12 +5,12 @@
 # include <stdbool.h>
 # include <stdio.h>
 # include <stdlib.h>
+# include <string.h>
+# include <errno.h>
 # include <dirent.h>
 # include <unistd.h>
 # include <pwd.h>
 # include <grp.h>
-
-# include "options.h"
 
 typedef struct {
 	char		*link_name;

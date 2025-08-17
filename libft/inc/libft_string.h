@@ -1,11 +1,11 @@
-#ifndef STRING_H
-# define STRING_H
+#ifndef FT_STRING_H
+# define FT_STRING_H
 
 int		ft_atoi(const char *str);
 char	*ft_itoa(int n);
 char	**ft_split(char const *s, char c);
-char    *ft_strcat(char *dest, const char *src);
-char    *ft_strcpy(char *dest, const char *src);
+char	*ft_strcat(char *dest, const char *src);
+char	*ft_strcpy(char *dest, const char *src);
 char	*ft_strdup(const char *s);
 int		ft_strlen(const char *str);
 size_t	ft_strlcpy(char *dest, const char *src, size_t n);

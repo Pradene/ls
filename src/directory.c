@@ -12,12 +12,12 @@ static void free_file(void *ptr) {
 	free(file);
 }
 
-static void free_directory(DirectoryInfo *data) {
-	for (size_t i = 0; i < data->files_count; i++) free_file(data->files[i]);
-	free(data->files);
-	free(data->path);
-	data->files = NULL;
-	data->path = NULL;
+static void free_directory(DirectoryInfo *directory) {
+	for (size_t i = 0; i < directory->files_count; i++) free_file(directory->files[i]);
+	free(directory->files);
+	free(directory->path);
+	directory->files = NULL;
+	directory->path = NULL;
 }
 
 static bool is_file_hidden(const char *name) {
@@ -114,23 +114,24 @@ static bool add_file_to_array(DynamicArray *arr, const char *entry_name, const c
 	return (true);
 }
 
-static bool read_directory(char *path, DirectoryInfo *data) {	
-	data->path = ft_strdup(path);
-	if (data->path == NULL) {
+static bool read_directory(char *path, DirectoryInfo *directory) {	
+	directory->path = ft_strdup(path);
+	if (directory->path == NULL) {
 		return (false);
 	}
 
 	DynamicArray *arr = da_create(16);
 	if (!arr) {
-		free(data->path);
+		free(directory->path);
 		return (false);
 	}
 
 	DIR *dir = opendir(path);
 	if (dir == NULL) {
+		fprintf(stderr, "ft_ls: cannot open directory '%s': %s\n", path, strerror(errno));
 		da_destroy(arr, free_file);
-		free(data->path);
-		fprintf(stderr, "opendir failed\n");
+		free(directory->path);
+		directory->path = NULL;
 		return (false);
 	}
 
@@ -142,46 +143,37 @@ static bool read_directory(char *path, DirectoryInfo *data) {
 
 		if (!add_file_to_array(arr, entry->d_name, path)) {
 			da_destroy(arr, free_file);
-			free(data->path);
+			free(directory->path);
 			closedir(dir);
-			fprintf(stderr, "Failed to add file to directory\n");
+			fprintf(stderr, "ft_ls: failed to add file to directory\n");
 			return (false);
 		}
 	}
 
 	closedir(dir);
 	
-	data->files_count = arr->size;
-	data->files = (FileInfo **)da_release(arr);
+	directory->files_count = arr->size;
+	directory->files = (FileInfo **)da_release(arr);
 	
 	return (true);
 }
 
-static size_t get_total_blocks(DirectoryInfo *data) {
-	size_t blocks = 0;
-	for (size_t i = 0; i < data->files_count; ++i) {
-		blocks += data->files[i]->stat.st_blocks / 2; 
-	}
-	return (blocks);
-}
-
-static void print_directory(DirectoryInfo *data) {
+static void print_directory(DirectoryInfo *directory) {
 	if (options & RECURSE) {
-		printf("%s:\n", data->path);
+		printf("%s:\n", directory->path);
 	}
 	
 	if ((options & LIST) || (options & LIST_GROUP_ONLY)) {
-		printf("total %lu\n", get_total_blocks(data));
-		print_list_formatted(*data);
+		print_list_formatted(*directory);
 	} else {
-		print_formatted(*data);
+		print_formatted(*directory);
 	}
 
 	if (options & RECURSE) {
-		for (size_t i = 0; i < data->files_count; i++) {
-			FileInfo *file = data->files[i];			
+		for (size_t i = 0; i < directory->files_count; i++) {
+			FileInfo *file = directory->files[i];			
 			if (S_ISDIR(file->stat.st_mode) && !is_file_special(file->name)) {
-				char *sub_path = build_path(data->path, file->name);
+				char *sub_path = build_path(directory->path, file->name);
 				if (sub_path == NULL) {
 					continue;
 				}
@@ -194,24 +186,26 @@ static void print_directory(DirectoryInfo *data) {
 	}
 }
 
-static void sort_directory(DirectoryInfo *data) {
+static void sort_directory(DirectoryInfo *directory) {
 	switch (sort_type) {
 		case SORT_NONE: break;
-		case SORT_TIME: quicksort(data->files, data->files_count, sizeof(FileInfo *), compare_file_mtime); break;
-		case SORT_SIZE: quicksort(data->files, data->files_count, sizeof(FileInfo *), compare_file_size); break;
+		case SORT_TIME: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_mtime); break;
+		case SORT_SIZE: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_size); break;
 		case SORT_NAME:
-		default: quicksort(data->files, data->files_count, sizeof(FileInfo *), compare_file_name); break;
+		default: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_name); break;
 	}
 
 	if (options & REVERSE) {
-		reverse(data->files, data->files_count, sizeof(FileInfo *));
+		reverse(directory->files, directory->files_count, sizeof(FileInfo *));
 	}
 }
 
 void process_directory(char *path) {
-	DirectoryInfo data = {0};
-	if (read_directory(path, &data) == false) return;
-	sort_directory(&data);
-	print_directory(&data);
-	free_directory(&data);
+	DirectoryInfo directory = {0};
+	if (read_directory(path, &directory) == false) {
+		return;
+	}
+	sort_directory(&directory);
+	print_directory(&directory);
+	free_directory(&directory);
 }

@@ -305,12 +305,21 @@ ColumnWidths get_list_format(DirectoryInfo data) {
 	return (widths);
 }
 
+static size_t get_total_blocks(DirectoryInfo directory) {
+	size_t blocks = 0;
+	for (size_t i = 0; i < directory.files_count; ++i) {
+		blocks += directory.files[i]->stat.st_blocks / 2; 
+	}
+	return (blocks);
+}
+
 void print_list_formatted(DirectoryInfo directory) {
 	StringBuffer *sb = create_string_buffer(4096);
 	if (sb == NULL) {
 		return;
 	}
 
+	printf("total %lu\n", get_total_blocks(directory));
 	ColumnWidths widths = get_list_format(directory);
 	for (size_t i = 0; i < directory.files_count; i++) {
 		FileInfo *file = directory.files[i];
