@@ -49,17 +49,25 @@ FileInfo *create_file_info(const char *name, const char *full_path, struct stat 
 
 DirectoryInfo read_directory(char *path) {
 	DirectoryInfo data = {0};
-	DIR *dir = opendir(path);
-	if (dir == NULL) {
-		return (data);
+
+	data.path = ft_strdup(path);
+	if (data.path == NULL) {
+		return ((DirectoryInfo){0});
 	}
 
 	size_t capacity = 16;
 	data.files = malloc(capacity * sizeof(FileInfo *));
 	if (data.files == NULL) {
-		closedir(dir);
 		fprintf(stderr, "malloc failed\n");
-		return (data);
+		return ((DirectoryInfo){0});
+	}
+
+	DIR *dir = opendir(path);
+	if (dir == NULL) {
+		free(data.path);
+		free(data.files);
+		fprintf(stderr, "opendir failed\n");
+		return ((DirectoryInfo){0});
 	}
 
 	struct dirent *entry;
@@ -113,16 +121,16 @@ static size_t get_total_blocks(DirectoryInfo *data) {
 	return (blocks);
 }
 
-static void print_directory(DirectoryInfo *directory, const char *path) {
+static void print_directory(DirectoryInfo *data) {
 	if (options & RECURSE) {
-		printf("%s:\n", path);
+		printf("%s:\n", data->path);
 	}
 	
 	if ((options & LIST) || (options & LIST_GROUP_ONLY)) {
-		printf("total %lu\n", get_total_blocks(directory));
-		print_list_formatted(*directory);
+		printf("total %lu\n", get_total_blocks(data));
+		print_list_formatted(*data);
 	} else {
-		print_formatted(*directory);
+		print_formatted(*data);
 	}
 }
 
@@ -147,7 +155,7 @@ void process_directory(char *path) {
 	}
 
 	sort_directory(&data);
-	print_directory(&data, path);
+	print_directory(&data);
 	
 	if (options & RECURSE) {
 		for (size_t i = 0; i < data.files_count; i++) {
@@ -164,6 +172,7 @@ void process_directory(char *path) {
 	}
 	
 	free_files(data.files, data.files_count);
+	free(data.path);
 }
 
 void free_file(FileInfo *file) {

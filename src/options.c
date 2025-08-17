@@ -28,7 +28,7 @@ int process_options(int ac, char **av) {
 						case 'U': sort_type = SORT_NONE; break;
 						default:
 							fprintf(stderr, "Invalid option: '%c'\n", *opt);
-							return (-1);
+							return (1);
 					}
 				}
 			}
@@ -37,24 +37,24 @@ int process_options(int ac, char **av) {
 	return (0);
 }
 
-int process_names(int ac, char **av, char ***names) {
+int process_names(int ac, char **av, char ***names, int *names_count) {
+	(*names_count) = 0;
 	(*names) = malloc((ac - 1) * sizeof(char *));
 	if ((*names) == NULL) {
 		fprintf(stderr, "malloc failed\n");
-		return (-1);
+		return (1);
 	}
-	
-	int count = 0;
+
 	bool process_flag = true;
-	
+
 	for (int i = 1; i < ac; i++) {
 		if (process_flag == true && av[i][0] == '-' && av[i][1] != '\0') {
 			if (ft_strcmp(av[i], "--") == 0) {
 				process_flag = false;
 			}
 		} else {
-			(*names)[count++] = av[i];
+			(*names)[(*names_count)++] = av[i];
 		}
 	}
-	return (count);
+	return (0);
 }

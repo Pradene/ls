@@ -21,12 +21,12 @@ typedef enum {
 }   SortType;
 
 typedef enum {
-	SHOW_VISIBLE,      // Default: hide hidden files
+	SHOW_VISIBLE,     // Default: hide hidden files
 	SHOW_ALL,         // -a flag: show all including . and ..
 	SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
 }   ShowType;
 
 int process_options(int ac, char **av);
-int process_names(int ac, char **av, char ***names);
+int process_names(int ac, char **av, char ***names, int *names_count);
 
 #endif

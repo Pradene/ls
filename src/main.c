@@ -10,8 +10,8 @@ int main(int ac, char **av) {
 	}
 	
 	char **names = NULL;
-	int names_count = process_names(ac, av, &names);
-	if (names_count == -1) {
+	int names_count = 0;
+	if (process_names(ac, av, &names, &names_count) != 0) {
 		return (EXIT_FAILURE);
 	}
 	

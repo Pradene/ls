@@ -26,6 +26,13 @@ typedef struct {
 	int valid;
 }   LayoutInfo;
 
+typedef struct {
+	int nlink;
+	int size;
+	int group;
+	int user;
+}   ColumnWidths;
+
 void    print_formatted(DirectoryInfo directory);
 void    print_list_formatted(DirectoryInfo directory);
 

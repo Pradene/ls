@@ -20,16 +20,9 @@ typedef struct {
 }   FileInfo;
 
 typedef struct {
-	int nlink;
-	int size;
-	int group;
-	int user;
-}   ColumnWidths;
-
-typedef struct {
+	char			*path;
 	FileInfo		**files;
 	size_t			files_count;
-	ColumnWidths	widths;
 }   DirectoryInfo;
 
 bool            should_skip_file(const char *name, ShowType show_type);
