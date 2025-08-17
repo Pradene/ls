@@ -8,6 +8,7 @@
 # include <stddef.h>
 
 # include "char.h"
+# include "da.h"
 # include "list.h"
 # include "mem.h"
 # include "print.h"

@@ -25,12 +25,6 @@ typedef struct {
 	size_t			files_count;
 }   DirectoryInfo;
 
-bool            should_skip_file(const char *name, ShowType show_type);
-FileInfo        *create_file_info(const char *name, const char *full_path, struct stat *st);
-DirectoryInfo   read_directory(char *path);
 void            process_directory(char *path);
-
-void            free_file(FileInfo *file);
-void            free_files(FileInfo **files, size_t count);
 
 #endif

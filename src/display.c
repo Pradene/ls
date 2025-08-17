@@ -65,8 +65,8 @@ int get_display_width(const char *str) {
 	return (width);
 }
 
-static DisplayData *create_display_data(DirectoryInfo directory) {
-	DisplayData *data = malloc(sizeof(DisplayData));
+static DisplayInfo *create_display_data(DirectoryInfo directory) {
+	DisplayInfo *data = malloc(sizeof(DisplayInfo));
 	if (data == NULL) {
 		return (NULL);
 	}
@@ -101,7 +101,7 @@ static DisplayData *create_display_data(DirectoryInfo directory) {
 	return (data);
 }
 
-static void free_display_data(DisplayData *data) {
+static void free_display_data(DisplayInfo *data) {
 	if (data == NULL) return;
 	
 	if (data->display_names) {
@@ -114,7 +114,7 @@ static void free_display_data(DisplayData *data) {
 	free(data);
 }
 
-static LayoutInfo calculate_layout(DisplayData *data, int cols, int term_width) {
+static LayoutInfo calculate_layout(DisplayInfo *data, int cols, int term_width) {
 	LayoutInfo layout = {0};
 	layout.cols = cols;
 	layout.rows = (data->count + cols - 1) / cols;
@@ -152,7 +152,7 @@ static LayoutInfo calculate_layout(DisplayData *data, int cols, int term_width) 
 	return (layout);
 }
 
-static LayoutInfo find_best_layout(DisplayData *data, int term_width) {
+static LayoutInfo find_best_layout(DisplayInfo *data, int term_width) {
 	LayoutInfo best_layout = {1, (int)data->count, NULL, 0, 1};
 	
 	for (int cols = 1; cols <= (int)data->count; cols++) {
@@ -176,7 +176,7 @@ static LayoutInfo find_best_layout(DisplayData *data, int term_width) {
 	return (best_layout);
 }
 
-static void print_layout(DisplayData *data, LayoutInfo layout) {
+static void print_layout(DisplayInfo *data, LayoutInfo layout) {
 	for (int row = 0; row < layout.rows; row++) {
 		for (int col = 0; col < layout.cols; col++) {
 			int index = col * layout.rows + row;
@@ -202,7 +202,7 @@ void print_formatted(DirectoryInfo directory) {
 		return;
 	}
 	
-	DisplayData *data = create_display_data(directory);
+	DisplayInfo *data = create_display_data(directory);
 	if (data == NULL) {
 		fprintf(stderr, "Failed to create display data\n");
 		return;

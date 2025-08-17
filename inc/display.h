@@ -16,7 +16,7 @@ typedef struct {
     char    **display_names;
 	size_t  count;
 	int     *widths;
-}   DisplayData;
+}   DisplayInfo;
 
 typedef struct {
 	int cols;
