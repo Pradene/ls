@@ -45,6 +45,22 @@ int compare_file_mtime(const void *a, const void *b) {
 	return (0);
 }
 
+int compare_file_atime(const void *a, const void *b) {
+	if (!a || !b) return (0);
+
+	const FileInfo *file_a = *(const FileInfo **)a;
+	const FileInfo *file_b = *(const FileInfo **)b;
+	
+	if (!file_a || !file_b) return (0);
+
+	time_t time_a = file_a->stat.st_atime;
+	time_t time_b = file_b->stat.st_atime;
+	
+	if (time_a < time_b) return (1);
+	if (time_a > time_b) return (-1);
+	return (0);
+}
+
 int compare_file_size(const void *a, const void *b) {
 	if (!a || !b) return (0);
 

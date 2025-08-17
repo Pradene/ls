@@ -20,20 +20,34 @@ int process_options(int ac, char **av) {
 						case 'R': options |= RECURSE; break;
 						case 'r': options |= REVERSE; break;
 						case 'd': options |= DIRECTORY; break;
+						case 'u': options |= ACCESS_TIME; break;
 						case 'a': show_type = SHOW_ALL; break;
 						case 'f': show_type = SHOW_ALL; sort_type = SORT_NONE; break;
 						case 'A': show_type = SHOW_ALMOST_ALL; break;
-						case 't': sort_type = SORT_TIME; break;
+						case 't': sort_type = SORT_MTIME; break;
 						case 'S': sort_type = SORT_SIZE; break;
 						case 'U': sort_type = SORT_NONE; break;
 						default:
-							fprintf(stderr, "Invalid option: '%c'\n", *opt);
+							fprintf(stderr, "ft_ls: invalid option -- '%c'\n", *opt);
 							return (1);
 					}
 				}
 			}
 		}
 	}
+	
+	if (options & ACCESS_TIME) {
+		if (options & LIST) {
+			if (sort_type == SORT_MTIME) {
+				sort_type = SORT_ATIME;
+			}
+		} else {
+			if (sort_type == SORT_NAME) {
+				sort_type = SORT_ATIME;
+			}
+		}
+	}
+
 	return (0);
 }
 
@@ -41,7 +55,7 @@ int process_names(int ac, char **av, char ***names, int *names_count) {
 	(*names_count) = 0;
 	(*names) = malloc((ac - 1) * sizeof(char *));
 	if ((*names) == NULL) {
-		fprintf(stderr, "malloc failed\n");
+		fprintf(stderr, "ft_ls: malloc failed\n");
 		return (1);
 	}
 

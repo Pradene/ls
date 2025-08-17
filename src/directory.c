@@ -151,7 +151,7 @@ static bool read_directory(char *path, DirectoryInfo *directory) {
 	}
 
 	closedir(dir);
-	
+
 	directory->files_count = arr->size;
 	directory->files = (FileInfo **)da_release(arr);
 	
@@ -189,7 +189,8 @@ static void print_directory(DirectoryInfo *directory) {
 static void sort_directory(DirectoryInfo *directory) {
 	switch (sort_type) {
 		case SORT_NONE: break;
-		case SORT_TIME: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_mtime); break;
+		case SORT_MTIME: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_mtime); break;
+		case SORT_ATIME: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_atime); break;
 		case SORT_SIZE: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_size); break;
 		case SORT_NAME:
 		default: quicksort(directory->files, directory->files_count, sizeof(FileInfo *), compare_file_name); break;

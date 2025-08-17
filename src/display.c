@@ -184,7 +184,6 @@ static void print_layout(DisplayInfo *data, LayoutInfo layout) {
 			
 			printf("%s", data->display_names[index]);
 			
-			// Add padding for next column
 			if (col < layout.cols - 1) {
 				int next_index = (col + 1) * layout.rows + row;
 				if (next_index < (int)data->count) {
@@ -220,6 +219,9 @@ void print_formatted(DirectoryInfo directory) {
 void format_date(const FileInfo *file, char *buffer) {
 	time_t now = time(NULL);
 	time_t file_time = file->stat.st_mtime;
+	if (options & ACCESS_TIME) {
+		file_time = file->stat.st_atime;
+	}
 	struct tm *now_tm = localtime(&now);
 	struct tm *file_tm = localtime(&file_time);
 	
@@ -229,18 +231,22 @@ void format_date(const FileInfo *file, char *buffer) {
 	};
 	
 	const time_t six_months = 180 * 24 * 60 * 60;
-	bool is_recent = (file_time >= now - six_months) && 
-					(file_time <= now + six_months) &&
-					(file_tm->tm_year == now_tm->tm_year);
 
-	if (is_recent) {
-		snprintf(buffer, 13, "%s %2d %02d:%02d",
-				months[file_tm->tm_mon], file_tm->tm_mday,
-				file_tm->tm_hour, file_tm->tm_min);
+	if ((file_time >= now - six_months) &&
+		(file_time <= now + six_months) &&
+		(file_tm->tm_year == now_tm->tm_year)
+	) {
+		snprintf(
+			buffer, 13, "%s %2d %02d:%02d",
+			months[file_tm->tm_mon], file_tm->tm_mday,
+			file_tm->tm_hour, file_tm->tm_min
+		);
 	} else {
-		snprintf(buffer, 13, "%s %2d  %04d",
-				months[file_tm->tm_mon], file_tm->tm_mday,
-				file_tm->tm_year + 1900);
+		snprintf(
+			buffer, 13, "%s %2d  %04d",
+			months[file_tm->tm_mon], file_tm->tm_mday,
+			file_tm->tm_year + 1900
+		);
 	}
 }
 

@@ -11,11 +11,13 @@ typedef enum {
 	RECURSE	        = 1 << 2,  // -R flag
 	REVERSE	        = 1 << 3,  // -r flag
 	DIRECTORY	    = 1 << 4,  // -d flag
+	ACCESS_TIME     = 1 << 5   // -u flag
 }   Options;
 
 typedef enum {
 	SORT_NAME,  // Default sorting
-	SORT_TIME,  // -t flag
+	SORT_MTIME, // -t flag
+	SORT_ATIME, // -u flag
 	SORT_SIZE,  // -S flag
 	SORT_NONE,  // -U flag
 }   SortType;
