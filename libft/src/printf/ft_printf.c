@@ -38,7 +38,7 @@ int ft_printf(const char *s, ...) {
 		} else {
 			++i;
 			format_init(&fmt);
-			format_parse_flags(s, &i, &fmt);
+			format_parse_flags(s, &i, &fmt, &params);
 			printed += ft_putformated(params, &fmt, s[i]);
 		}
 		++i;

@@ -48,9 +48,7 @@ int append_to_buffer(StringBuffer *sb, const char *format, ...) {
 }
 
 void free_string_buffer(StringBuffer *sb) {
-	if (!sb) {
-		return;
-	}
+	if (!sb) return;
 	free(sb->buffer);
 	free(sb);
 }

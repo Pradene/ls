@@ -4,7 +4,7 @@ extern Options options;
 extern SortType sort_type;
 extern ShowType show_type;
 
-int process_options(int ac, char **av) {
+int parse_args_options(int ac, char **av) {
 	bool process_flag = true;
 	
 	for (int i = 1; i < ac; i++) {
@@ -51,10 +51,9 @@ int process_options(int ac, char **av) {
 	return (0);
 }
 
-int process_names(int ac, char **av, char ***names, int *names_count) {
-	(*names_count) = 0;
-	(*names) = malloc((ac - 1) * sizeof(char *));
-	if ((*names) == NULL) {
+int parse_args_files(int ac, char **av, DynamicArray **names) {
+	*names = da_create(8);
+	if (*names == NULL) {
 		fprintf(stderr, "ft_ls: malloc failed\n");
 		return (1);
 	}
@@ -67,7 +66,11 @@ int process_names(int ac, char **av, char ***names, int *names_count) {
 				process_flag = false;
 			}
 		} else {
-			(*names)[(*names_count)++] = av[i];
+			if (!da_push(*names, av[i])) {
+				da_destroy(*names, NULL);
+				fprintf(stderr, "ft_ls: failed to add name to array\n");
+				return (1);
+			}
 		}
 	}
 	return (0);

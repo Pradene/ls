@@ -1,8 +1,8 @@
 #ifndef OPTIONS_H
-# define OPTIONS_H
+#define OPTIONS_H
 
-# include <stdio.h>
-# include <stdlib.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 typedef enum {
 	NONE	        = 0,
@@ -28,7 +28,7 @@ typedef enum {
 	SHOW_ALMOST_ALL,  // -A flag: show all except . and ..
 }   ShowType;
 
-int process_options(int ac, char **av);
-int process_names(int ac, char **av, char ***names, int *names_count);
+int parse_args_options(int ac, char **av);
+int parse_args_files(int ac, char **av, DynamicArray **names);
 
 #endif

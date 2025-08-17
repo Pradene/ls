@@ -23,7 +23,7 @@ int	ft_putptr_formatted(unsigned long long n, PrintFormat *fmt);
 int	ft_putsize_t_formatted(size_t n, PrintFormat *fmt);
 
 void format_init(PrintFormat *fmt);
-void format_parse_flags(const char *s, int *i, PrintFormat *fmt);
+void format_parse_flags(const char *s, int *i, PrintFormat *fmt, va_list *params);
 int	format_print_padding(int padding, char c);
 
 #endif

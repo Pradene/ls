@@ -1,10 +1,10 @@
 #ifndef STRING_BUFFER_H
-# define STRING_BUFFER_H
+#define STRING_BUFFER_H
 
-# include <stddef.h>
-# include <stdarg.h>
-# include <stdlib.h>
-# include <stdio.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 typedef struct {
 	char    *buffer;

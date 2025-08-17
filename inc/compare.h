@@ -1,5 +1,5 @@
 #ifndef COMPARE_H
-# define COMPARE_H
+#define COMPARE_H
 
 int compare_name(const void *a, const void *b);
 int compare_file_name(const void *a, const void *b);

@@ -54,3 +54,26 @@ void **da_release(DynamicArray *arr) {
 	
 	return (data);
 }
+
+size_t da_size(const DynamicArray *arr) {
+    return (arr ? arr->size : 0);
+}
+
+void *da_get(const DynamicArray *arr, size_t index) {
+    if (!arr || index >= arr->size) return (NULL);
+    return (arr->data[index]);
+}
+
+void da_clear(DynamicArray *arr, void (*free_func)(void *)) {
+    if (!arr) return;
+    
+    if (free_func && arr->data) {
+        for (size_t i = 0; i < arr->size; i++) {
+            if (arr->data[i]) {
+                free_func(arr->data[i]);
+            }
+        }
+    }
+    
+    arr->size = 0;
+}
