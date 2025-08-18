@@ -34,35 +34,48 @@ int ft_puthex_formatted(unsigned long long n, PrintfFormat *fmt, char c) {
 	unsigned long long temp = n;
 	int prefix_len = (fmt->flags.hash && n != 0) ? 2 : 0;
 	
-	// Calculate digit length
-	len = (n == 0) ? 1 : 0;
-	while (temp) {
-		len++;
-		temp /= 16;
+	if (n == 0) {
+		len = 1;
+	} else {
+		while (temp) {
+			len++;
+			temp /= 16;
+		}
 	}
 	
-	int total_len = len + prefix_len;
+	if (fmt->precision == 0 && n == 0) {
+		len = 0;
+	}
+	
+	int actual_len = (fmt->precision > len) ? fmt->precision : len;
+	int total_len = actual_len + prefix_len;
 	int pad = fmt->width - total_len;
 	
-	// Padding for right alignment
-	if (!fmt->flags.minus && !fmt->flags.zero && pad > 0)
-		printed += ft_printf_padding(pad, ' ');
+	if (!fmt->flags.minus && pad > 0) {
+		char pad_char = (fmt->flags.zero && fmt->precision < 0) ? '0' : ' ';
+		if (pad_char == '0' && prefix_len > 0) {
+			ft_putchar('0');
+			ft_putchar(c == 'x' ? 'x' : 'X');
+			printed += 2;
+			prefix_len = 0;
+		}
+		printed += ft_printf_padding(pad, pad_char);
+	}
 	
-	// Prefix and zero padding
-	if (prefix_len) {
+	if (prefix_len > 0) {
 		ft_putchar('0');
 		ft_putchar(c == 'x' ? 'x' : 'X');
 		printed += 2;
 	}
 	
-	if (!fmt->flags.minus && fmt->flags.zero && pad > 0) {
-		printed += ft_printf_padding(pad, '0');
+	if (fmt->precision > len) {
+		printed += ft_printf_padding(fmt->precision - len, '0');
 	}
 	
-	// Print digits
-	printed += ft_puthex(n, c);
+	if (!(fmt->precision == 0 && n == 0)) {
+		printed += ft_puthex(n, c);
+	}
 	
-	// Left alignment padding
 	if (fmt->flags.minus && pad > 0) {
 		printed += ft_printf_padding(pad, ' ');
 	}

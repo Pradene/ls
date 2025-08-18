@@ -1,6 +1,6 @@
 #include "libft.h"
 
-static int put_unsigned_digits(unsigned int n) {
+static int put_unsigned_digits(unsigned long long n) {
 	int printed = 0;
 	if (n >= 10) {
 		printed += put_unsigned_digits(n / 10);
@@ -11,37 +11,57 @@ static int put_unsigned_digits(unsigned int n) {
 	return (printed + 1);
 }
 
-int ft_putunbr_formatted(unsigned int n, PrintfFormat *fmt) {
-	int size = 0;
+int ft_putunbr_formatted(unsigned long long n, PrintfFormat *fmt) {
+	int printed = 0;
 	int len = 0;
-	unsigned int temp = n;
+	unsigned long long temp = n;
 	
-	// Calculate length
-	len = (n == 0) ? 1 : 0;
-	while (temp) {
-		len++;
-		temp /= 10;
+	if (n == 0) {
+		len = 1;
+	} else {
+		while (temp) {
+			len++;
+			temp /= 10;
+		}
 	}
 	
-	int pad = fmt->width - len;
+	if (fmt->precision == 0 && n == 0) {
+		len = 0;
+		int pad = fmt->width;
+		
+		if (!fmt->flags.minus && pad > 0) {
+			printed += ft_printf_padding(pad, ' ');
+		}
+		
+		if (fmt->flags.minus && pad > 0) {
+			printed += ft_printf_padding(pad, ' ');
+		}
+		
+		return printed;
+	}
 	
-	// Right alignment padding
+	int actual_len = (fmt->precision > len) ? fmt->precision : len;
+	int pad = fmt->width - actual_len;
+	
 	if (!fmt->flags.minus && pad > 0) {
-		char pad_char = fmt->flags.zero ? '0' : ' ';
-		size += ft_printf_padding(pad, pad_char);
+		char pad_char = (fmt->flags.zero && fmt->precision < 0) ? '0' : ' ';
+		printed += ft_printf_padding(pad, pad_char);
 	}
 	
-	// Print number
+	if (fmt->precision > len) {
+		printed += ft_printf_padding(fmt->precision - len, '0');
+	}
+	
 	if (n == 0) {
 		ft_putchar('0');
-		size += 1;
+		printed += 1;
 	} else {
-		size += put_unsigned_digits(n);
+		printed += put_unsigned_digits(n);
 	}
 	
-	// Left alignment padding
-	if (fmt->flags.minus && pad > 0)
-		size += ft_printf_padding(pad, ' ');
+	if (fmt->flags.minus && pad > 0) {
+		printed += ft_printf_padding(pad, ' ');
+	}
 	
-	return size;
+	return printed;
 }

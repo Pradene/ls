@@ -10,19 +10,16 @@ int ft_putptr_formatted(unsigned long long n, PrintfFormat *fmt) {
 		int len = 5;
 		int pad = fmt->width - len;
 		
-		// Right alignment padding
 		if (!fmt->flags.minus && pad > 0) {
 			printed += ft_printf_padding(pad, ' ');
 		}
 		
 		printed += write(1, nil_str, len);
 		
-		// Left alignment padding
 		if (fmt->flags.minus && pad > 0) {
 			printed += ft_printf_padding(pad, ' ');
 		}
 	} else {
-		// Calculate hex length
 		temp = n;
 		hex_len = (n == 0) ? 1 : 0;
 		while (temp) {
@@ -30,19 +27,16 @@ int ft_putptr_formatted(unsigned long long n, PrintfFormat *fmt) {
 			temp /= 16;
 		}
 		
-		int total_len = hex_len + 2; // "0x" prefix
+		int total_len = hex_len + 2;
 		int pad = fmt->width - total_len;
 		
-		// Right alignment padding (before entire pointer)
 		if (!fmt->flags.minus && pad > 0) {
 			printed += ft_printf_padding(pad, fmt->flags.zero ? '0' : ' ');
 		}
 		
-		// Print prefix and value together
 		printed += write(1, "0x", 2);
 		printed += ft_puthex(n, 'x');
 		
-		// Left alignment padding (after entire pointer)
 		if (fmt->flags.minus && pad > 0) {
 			printed += ft_printf_padding(pad, ' ');
 		}

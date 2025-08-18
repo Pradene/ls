@@ -14,7 +14,6 @@ static void ft_printf_parse_flags(const char *s, int *i, PrintfFormat *fmt) {
         (*i)++;
     }
     
-    // Handle flag conflicts
     if (fmt->flags.minus) fmt->flags.zero = 0;
     if (fmt->flags.plus) fmt->flags.space = 0;
 }

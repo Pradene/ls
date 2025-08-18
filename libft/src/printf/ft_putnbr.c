@@ -8,22 +8,48 @@ int ft_putnbr_formatted(long long n, PrintfFormat *fmt) {
     unsigned long long temp = num;
     int sign_len = (is_negative || fmt->flags.plus || fmt->flags.space) ? 1 : 0;
     
-    // Calculate digit length
-    len = (num == 0) ? 1 : 0;
-    while (temp) {
-        len++;
-        temp /= 10;
+    if (num == 0) {
+        len = 1;
+    } else {
+        while (temp) {
+            len++;
+            temp /= 10;
+        }
     }
     
-    // Apply precision (minimum digits)
+    if (fmt->precision == 0 && num == 0) {
+        len = 0;
+        int total_len = sign_len;
+        int pad = fmt->width - total_len;
+        
+        if (!fmt->flags.minus && pad > 0) {
+            printed += ft_printf_padding(pad, ' ');
+        }
+        
+        if (is_negative) {
+            ft_putchar('-');
+            printed++;
+        } else if (fmt->flags.plus) {
+            ft_putchar('+');
+            printed++;
+        } else if (fmt->flags.space) {
+            ft_putchar(' ');
+            printed++;
+        }
+        
+        if (fmt->flags.minus && pad > 0) {
+            printed += ft_printf_padding(pad, ' ');
+        }
+        
+        return printed;
+    }
+    
     int actual_len = (fmt->precision > len) ? fmt->precision : len;
     int total_len = actual_len + sign_len;
     int pad = fmt->width - total_len;
     
-    // Handle sign and padding
     if (!fmt->flags.minus) {
         if (fmt->flags.zero && fmt->precision < 0) {
-            // Sign first, then zero padding
             if (is_negative) {
                 ft_putchar('-');
                 printed++;
@@ -34,10 +60,13 @@ int ft_putnbr_formatted(long long n, PrintfFormat *fmt) {
                 ft_putchar(' ');
                 printed++;
             }
-            printed += ft_printf_padding(pad, '0');
+            if (pad > 0) {
+                printed += ft_printf_padding(pad, '0');
+            }
         } else {
-            // Space padding first, then sign
-            printed += ft_printf_padding(pad, ' ');
+            if (pad > 0) {
+                printed += ft_printf_padding(pad, ' ');
+            }
             if (is_negative) {
                 ft_putchar('-');
                 printed++;
@@ -50,7 +79,6 @@ int ft_putnbr_formatted(long long n, PrintfFormat *fmt) {
             }
         }
     } else {
-        // Left align: sign first
         if (is_negative) {
             ft_putchar('-');
             printed++;
@@ -63,17 +91,14 @@ int ft_putnbr_formatted(long long n, PrintfFormat *fmt) {
         }
     }
     
-    // Print precision zeros
     if (fmt->precision > len) {
         printed += ft_printf_padding(fmt->precision - len, '0');
     }
     
-    // Print digits
     if (num == 0) {
         ft_putchar('0');
         printed++;
     } else {
-        // Convert to string and print
         char digits[21];
         int i = 20;
         digits[i] = '\0';
@@ -85,7 +110,6 @@ int ft_putnbr_formatted(long long n, PrintfFormat *fmt) {
         printed += ft_strlen(&digits[i]);
     }
     
-    // Left alignment padding
     if (fmt->flags.minus && pad > 0) {
         printed += ft_printf_padding(pad, ' ');
     }
