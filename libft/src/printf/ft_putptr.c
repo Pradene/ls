@@ -1,6 +1,6 @@
 #include "libft.h"
 
-int ft_putptr_formatted(unsigned long long n, PrintFormat *fmt) {
+int ft_putptr_formatted(unsigned long long n, PrintfFormat *fmt) {
 	int printed = 0;
 	int hex_len = 0;
 	unsigned long long temp = n;
@@ -11,15 +11,15 @@ int ft_putptr_formatted(unsigned long long n, PrintFormat *fmt) {
 		int pad = fmt->width - len;
 		
 		// Right alignment padding
-		if (!fmt->minus && pad > 0) {
-			printed += format_print_padding(pad, ' ');
+		if (!fmt->flags.minus && pad > 0) {
+			printed += ft_printf_padding(pad, ' ');
 		}
 		
 		printed += write(1, nil_str, len);
 		
 		// Left alignment padding
-		if (fmt->minus && pad > 0) {
-			printed += format_print_padding(pad, ' ');
+		if (fmt->flags.minus && pad > 0) {
+			printed += ft_printf_padding(pad, ' ');
 		}
 	} else {
 		// Calculate hex length
@@ -34,8 +34,8 @@ int ft_putptr_formatted(unsigned long long n, PrintFormat *fmt) {
 		int pad = fmt->width - total_len;
 		
 		// Right alignment padding (before entire pointer)
-		if (!fmt->minus && pad > 0) {
-			printed += format_print_padding(pad, fmt->zero ? '0' : ' ');
+		if (!fmt->flags.minus && pad > 0) {
+			printed += ft_printf_padding(pad, fmt->flags.zero ? '0' : ' ');
 		}
 		
 		// Print prefix and value together
@@ -43,8 +43,8 @@ int ft_putptr_formatted(unsigned long long n, PrintFormat *fmt) {
 		printed += ft_puthex(n, 'x');
 		
 		// Left alignment padding (after entire pointer)
-		if (fmt->minus && pad > 0) {
-			printed += format_print_padding(pad, ' ');
+		if (fmt->flags.minus && pad > 0) {
+			printed += ft_printf_padding(pad, ' ');
 		}
 	}
 	return (printed);

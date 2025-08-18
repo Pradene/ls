@@ -315,7 +315,7 @@ static size_t get_total_blocks(DirectoryInfo *directory) {
 }
 
 void print_list_formatted(DirectoryInfo *directory) {
-	ft_printf("total %z\n", get_total_blocks(directory));
+	ft_printf("total %zu\n", get_total_blocks(directory));
 	ColumnWidths widths = get_list_format(directory);
 	
 	for (size_t i = 0; i < da_size(directory->files); i++) {
@@ -349,7 +349,7 @@ void print_list_formatted(DirectoryInfo *directory) {
 		}
 
 		if (options & LIST_GROUP_ONLY) {
-			ft_printf("%s %*z %-*s %*z %s %s %s %s\n",
+			ft_printf("%s %*zu %-*s %*zu %s %s %s %s\n",
 				perm_buf, widths.nlink, file->stat.st_nlink,
 				widths.group, groupname,
 				widths.size, file->stat.st_size,
@@ -357,7 +357,7 @@ void print_list_formatted(DirectoryInfo *directory) {
 				link_indicator, link_target
 			);
 		} else {
-			ft_printf("%s %*z %-*s %-*s %*z %s %s %s %s\n",
+			ft_printf("%s %*zu %-*s %-*s %*zu %s %s %s %s\n",
 				perm_buf, widths.nlink, file->stat.st_nlink,
 				widths.user, username,
 				widths.group, groupname,

@@ -1,15 +1,15 @@
 #include "libft.h"
 
-int ft_putchar_formatted(char c, PrintFormat *fmt) {
+int ft_putchar_formatted(char c, PrintfFormat *fmt) {
 	int printed = 0;
-	int padding = fmt->width - 1;
+	int padding = (fmt != NULL) ? (fmt->width - 1) : 0;
 	
 	if (padding > 0) {
-		if (fmt->minus) {
+		if (fmt->flags.minus) {
 			ft_putchar(c);
-			printed += format_print_padding(padding, ' ');
+			printed += ft_printf_padding(padding, ' ');
 		} else {
-			printed += format_print_padding(padding, ' ');
+			printed += ft_printf_padding(padding, ' ');
 			ft_putchar(c);
 		}
 	} else {

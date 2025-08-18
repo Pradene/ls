@@ -11,7 +11,7 @@ static int put_unsigned_digits(unsigned int n) {
 	return (printed + 1);
 }
 
-int ft_putunbr_formatted(unsigned int n, PrintFormat *fmt) {
+int ft_putunbr_formatted(unsigned int n, PrintfFormat *fmt) {
 	int size = 0;
 	int len = 0;
 	unsigned int temp = n;
@@ -26,9 +26,9 @@ int ft_putunbr_formatted(unsigned int n, PrintFormat *fmt) {
 	int pad = fmt->width - len;
 	
 	// Right alignment padding
-	if (!fmt->minus && pad > 0) {
-		char pad_char = fmt->zero ? '0' : ' ';
-		size += format_print_padding(pad, pad_char);
+	if (!fmt->flags.minus && pad > 0) {
+		char pad_char = fmt->flags.zero ? '0' : ' ';
+		size += ft_printf_padding(pad, pad_char);
 	}
 	
 	// Print number
@@ -40,8 +40,8 @@ int ft_putunbr_formatted(unsigned int n, PrintFormat *fmt) {
 	}
 	
 	// Left alignment padding
-	if (fmt->minus && pad > 0)
-		size += format_print_padding(pad, ' ');
+	if (fmt->flags.minus && pad > 0)
+		size += ft_printf_padding(pad, ' ');
 	
 	return size;
 }
