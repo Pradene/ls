@@ -315,16 +315,13 @@ static size_t get_total_blocks(DirectoryInfo *directory) {
 }
 
 void print_list_formatted(DirectoryInfo *directory) {
-	StringBuffer *sb = create_string_buffer(4096);
-	if (sb == NULL) {
-		return;
-	}
-
 	ft_printf("total %z\n", get_total_blocks(directory));
 	ColumnWidths widths = get_list_format(directory);
+	
 	for (size_t i = 0; i < da_size(directory->files); i++) {
 		FileInfo *file = da_get(directory->files, i);
 		if (file == NULL) continue;
+		
 		char date_buf[64], perm_buf[64], name_buf[256];
 		
 		get_colored_name(file, name_buf, sizeof(name_buf));
@@ -352,8 +349,7 @@ void print_list_formatted(DirectoryInfo *directory) {
 		}
 
 		if (options & LIST_GROUP_ONLY) {
-			append_to_buffer(
-				sb, "%s %*ld %-*s %*lu %s %s %s %s\n",
+			ft_printf("%s %*z %-*s %*z %s %s %s %s\n",
 				perm_buf, widths.nlink, file->stat.st_nlink,
 				widths.group, groupname,
 				widths.size, file->stat.st_size,
@@ -361,8 +357,7 @@ void print_list_formatted(DirectoryInfo *directory) {
 				link_indicator, link_target
 			);
 		} else {
-			append_to_buffer(
-				sb, "%s %*ld %-*s %-*s %*lu %s %s %s %s\n",
+			ft_printf("%s %*z %-*s %-*s %*z %s %s %s %s\n",
 				perm_buf, widths.nlink, file->stat.st_nlink,
 				widths.user, username,
 				widths.group, groupname,
@@ -372,7 +367,4 @@ void print_list_formatted(DirectoryInfo *directory) {
 			);
 		}
 	}
-
-	ft_printf("%s", sb->buffer);
-	free_string_buffer(sb);
 }

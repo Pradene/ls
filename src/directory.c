@@ -85,26 +85,26 @@ static FileInfo *create_file_info(const char *name, const char *full_path, struc
 	return (file);
 }
 
-static bool add_file_to_array(DynamicArray *arr, const char *entry_name, const char *dir_path) {
-	char *full_path = build_path(dir_path, entry_name);
-	if (full_path == NULL) {
+static bool directory_add_file(DirectoryInfo *directory, const char *filename) {
+	char *path = build_path(directory->path, filename);
+	if (path == NULL) {
 		return (false);
 	}
 
 	struct stat st;
-	if (lstat(full_path, &st) != 0) {
-		free(full_path);
+	if (lstat(path, &st) != 0) {
+		free(path);
 		return (true);
 	}
 
-	FileInfo *file = create_file_info(entry_name, full_path, &st);
-	free(full_path);
+	FileInfo *file = create_file_info(filename, path, &st);
+	free(path);
 	
 	if (file == NULL) {
 		return (false);
 	}
 
-	if (da_push(arr, file) == false) {
+	if (da_push(directory->files, file) == false) {
 		free_file(file);
 		return (false);
 	}
@@ -137,7 +137,7 @@ static bool read_directory(char *path, DirectoryInfo *directory) {
 			continue;
 		}
 
-		if (add_file_to_array(directory->files, entry->d_name, path) == false) {
+		if (directory_add_file(directory, entry->d_name) == false) {
 			fprintf(stderr, "ft_ls: failed to add file to directory\n");
 			free_directory(directory);
 			closedir(dir);
@@ -175,17 +175,20 @@ static void print_directory(DirectoryInfo *directory) {
 }
 
 static void sort_directory(DirectoryInfo *directory) {
+	void	*data = directory->files->data;
+	size_t	size = directory->files->size;
+
 	switch (sort_type) {
 		case SORT_NONE: break;
-		case SORT_MTIME: quicksort(directory->files->data, da_size(directory->files), sizeof(FileInfo *), compare_file_mtime); break;
-		case SORT_ATIME: quicksort(directory->files->data, da_size(directory->files), sizeof(FileInfo *), compare_file_atime); break;
-		case SORT_SIZE: quicksort(directory->files->data, da_size(directory->files), sizeof(FileInfo *), compare_file_size); break;
+		case SORT_MTIME: quicksort(data, size, sizeof(FileInfo *), compare_file_mtime); break;
+		case SORT_ATIME: quicksort(data, size, sizeof(FileInfo *), compare_file_atime); break;
+		case SORT_SIZE: quicksort(data, size, sizeof(FileInfo *), compare_file_size); break;
 		case SORT_NAME:
-		default: quicksort(directory->files->data, da_size(directory->files), sizeof(FileInfo *), compare_file_name); break;
+		default: quicksort(data, size, sizeof(FileInfo *), compare_file_name); break;
 	}
 
 	if (options & REVERSE) {
-		reverse(directory->files->data, da_size(directory->files), sizeof(FileInfo *));
+		reverse(data, size, sizeof(FileInfo *));
 	}
 }
 

@@ -25,8 +25,8 @@ int main(int ac, char **av) {
 
 		for (size_t i = 0; i < files_count; i++) {
 			if (i != 0) printf("\n");
-			char *name = (char *)da_get(files, i);
-			process_directory(name);
+			char *file = (char *)da_get(files, i);
+			process_directory(file);
 		}
 	}
 	
