@@ -1,22 +1,5 @@
 #include "libft.h"
 
-static char	*sdup(const char *str, int n) {
-	char	*dest;
-	int		i;
-
-	i = 0;
-	dest = malloc(sizeof(char) * (n + 1));
-	if (!dest) {
-		return (0);
-	}
-	while (i < n) {
-		dest[i] = str[i];
-		i++;
-	}
-	dest[i] = 0;
-	return (dest);
-}
-
 static int	count(const char *s, char c) {
 	int	i;
 	int	count;
@@ -47,7 +30,7 @@ char	**ft_split(const char *s, char c) {
 			len++;
 		}
 		if (len && (s[j] == c || s[j] == 0)) {
-			strings[i] = sdup(&s[j] - len, len);
+			strings[i] = ft_strndup(&s[j] - len, len);
 			len = 0;
 			i++;
 		}

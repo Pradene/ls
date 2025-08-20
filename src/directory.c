@@ -4,18 +4,20 @@ extern Options options;
 extern SortType sort_type;
 extern ShowType show_type;
 
-static void free_file(void *ptr) {
-	FileInfo *file = (FileInfo *)ptr;
-	if (file == NULL) return;
-	free(file->link_name);
+static void free_file(FileInfo *file) {
+	if (!file) return;
+	free(file->link);
 	free(file->name);
-	free(file);
 }
 
 static void free_directory(DirectoryInfo *directory) {
-	da_destroy(directory->files, free_file);
+	if (!directory) return;
+	ft_da_foreach(&directory->files, file, FileInfo) {
+		free_file(file);
+	}
+	
+	ft_da_free(directory->files);
 	free(directory->path);
-	free(directory);
 }
 
 static bool is_file_hidden(const char *name) {
@@ -41,7 +43,7 @@ static char *build_path(const char *dir_path, const char *filename) {
 	size_t total_len = dir_len + name_len + 2; // + 2 for '/' and '\0'
 	
 	char *full_path = malloc(total_len);
-	if (full_path == NULL) {
+	if (!full_path) {
 		return (NULL);
 	}
 	
@@ -54,20 +56,15 @@ static char *build_path(const char *dir_path, const char *filename) {
 	return (full_path);
 }
 
-static FileInfo *create_file_info(const char *name, const char *full_path, struct stat *st) {
-	FileInfo *file = malloc(sizeof(FileInfo));
-	if (file == NULL) {
-		return (NULL);
+static FileInfo create_file_info(const char *name, const char *full_path, struct stat *st) {
+	FileInfo file = {0};
+	file.name = ft_strdup(name);
+	if (!file.name) {
+		return ((FileInfo){0});
 	}
 	
-	file->name = ft_strdup(name);
-	if (file->name == NULL) {
-		free(file);
-		return (NULL);
-	}
-	
-	file->link_name = NULL;
-	file->stat = *st;
+	file.link = NULL;
+	file.stat = *st;
 	
 	if (S_ISLNK(st->st_mode)) {
 		char *link_target = malloc(1024);
@@ -75,7 +72,7 @@ static FileInfo *create_file_info(const char *name, const char *full_path, struc
 			ssize_t len = readlink(full_path, link_target, 1023);
 			if (len > 0) {
 				link_target[len] = '\0';
-				file->link_name = link_target;
+				file.link = link_target;
 			} else {
 				free(link_target);
 			}
@@ -87,25 +84,22 @@ static FileInfo *create_file_info(const char *name, const char *full_path, struc
 
 static bool directory_add_file(DirectoryInfo *directory, const char *filename) {
 	char *path = build_path(directory->path, filename);
-	if (path == NULL) {
+	if (!path) {
 		return (false);
 	}
 
 	struct stat st;
-	if (lstat(path, &st) != 0) {
+	if (lstat(path, &st)) {
 		free(path);
 		return (true);
 	}
 
-	FileInfo *file = create_file_info(filename, path, &st);
-	free(path);
+	FileInfo file = create_file_info(filename, path, &st);
 	
-	if (file == NULL) {
-		return (false);
-	}
+	free(path);
 
-	if (da_push(directory->files, file) == false) {
-		free_file(file);
+	if (!ft_da_append(&directory->files, file)) {
+		free_file(&file);
 		return (false);
 	}
 
@@ -114,18 +108,12 @@ static bool directory_add_file(DirectoryInfo *directory, const char *filename) {
 
 static bool read_directory(char *path, DirectoryInfo *directory) {	
 	directory->path = ft_strdup(path);
-	if (directory->path == NULL) {
-		return (false);
-	}
-
-	directory->files = da_create(16);
-	if (directory->files == NULL) {
-		free(directory->path);
+	if (!directory->path) {
 		return (false);
 	}
 
 	DIR *dir = opendir(path);
-	if (dir == NULL) {
+	if (!dir) {
 		fprintf(stderr, "ft_ls: cannot open directory '%s': %s\n", path, strerror(errno));
 		free_directory(directory);
 		return (false);
@@ -161,11 +149,10 @@ static void print_directory(DirectoryInfo *directory) {
 	}
 
 	if (options & RECURSE) {
-		for (size_t i = 0; i < directory->files->size; i++) {
-			FileInfo *file = da_get(directory->files, i);	
+		ft_da_foreach(&directory->files, file, FileInfo) {
 			if (S_ISDIR(file->stat.st_mode) && !is_file_special(file->name)) {
 				char *sub_path = build_path(directory->path, file->name);
-				if (sub_path == NULL) continue;
+				if (!sub_path) continue;
 				ft_printf("\n");
 				process_directory(sub_path);
 				free(sub_path);
@@ -175,28 +162,27 @@ static void print_directory(DirectoryInfo *directory) {
 }
 
 static void sort_directory(DirectoryInfo *directory) {
-	void	*data = directory->files->data;
-	size_t	size = directory->files->size;
+	void	*data = directory->files.items;
+	size_t	size = ft_da_size(&directory->files);
 
 	switch (sort_type) {
 		case SORT_NONE: break;
-		case SORT_MTIME: quicksort(data, size, sizeof(FileInfo *), compare_file_mtime); break;
-		case SORT_ATIME: quicksort(data, size, sizeof(FileInfo *), compare_file_atime); break;
-		case SORT_SIZE: quicksort(data, size, sizeof(FileInfo *), compare_file_size); break;
+		case SORT_MTIME: ft_quicksort(data, size, sizeof(FileInfo), compare_file_mtime); break;
+		case SORT_ATIME: ft_quicksort(data, size, sizeof(FileInfo), compare_file_atime); break;
+		case SORT_SIZE: ft_quicksort(data, size, sizeof(FileInfo), compare_file_size); break;
 		case SORT_NAME:
-		default: quicksort(data, size, sizeof(FileInfo *), compare_file_name); break;
+		default: ft_quicksort(data, size, sizeof(FileInfo), compare_file_name); break;
 	}
 
 	if (options & REVERSE) {
-		reverse(data, size, sizeof(FileInfo *));
+		ft_reverse(data, size, sizeof(FileInfo));
 	}
 }
 
 void process_directory(char *path) {
-	DirectoryInfo *directory = malloc(sizeof(DirectoryInfo));
-	if (directory == NULL) return;
-	if (read_directory(path, directory) == false) return;
-	sort_directory(directory);
-	print_directory(directory);
-	free_directory(directory);
+	DirectoryInfo directory = {0};
+	if (read_directory(path, &directory) == false) return;
+	sort_directory(&directory);
+	print_directory(&directory);
+	free_directory(&directory);
 }

@@ -5,31 +5,30 @@ SortType sort_type = SORT_NAME;
 ShowType show_type = SHOW_VISIBLE;
 
 int main(int ac, char **av) {	
-	if (parse_args_options(ac, av) != 0) {
+	if (parse_args_options(ac, av) == false) {
 		return (EXIT_FAILURE);
 	}
 	
-	DynamicArray *files = NULL;
-	if (parse_args_files(ac, av, &files) != 0) {
+	Files files = {0};
+	if (parse_args_files(ac, av, &files) == false) {
 		return (EXIT_FAILURE);
 	}
 	
-	size_t files_count = da_size(files);
+	size_t files_count = ft_da_size(&files);
 	if (files_count == 0) {
 		process_directory(".");
 	} else {
-		quicksort(files, files_count, sizeof(char *), compare_name);
+		ft_quicksort(&files.items, files_count, sizeof(char *), compare_name);
 		if (options & REVERSE) {
-			reverse(files, files_count, sizeof(char *));
+			ft_reverse(&files.items, files_count, sizeof(char *));
 		}
 
 		for (size_t i = 0; i < files_count; i++) {
 			if (i != 0) printf("\n");
-			char *file = (char *)da_get(files, i);
-			process_directory(file);
+			process_directory((char *)files.items[i]);
 		}
 	}
 	
-	da_destroy(files, NULL);
+	ft_da_free(files);
 	return (EXIT_SUCCESS);
 }

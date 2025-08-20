@@ -1,5 +1,7 @@
-#ifndef PRINTF_H
-# define PRINTF_H
+#ifndef FT_PRINTF_H
+#define FT_PRINTF_H
+
+#include <stdarg.h>
 
 typedef struct {
 	int minus;	  // '-' flag (left justify)
@@ -50,18 +52,18 @@ typedef struct {
 	PrintfSpecifier	specifier;
 }	PrintfFormat;
 
-int	ft_printf(const char *s, ...);
-void ft_printf_parse_format(const char *s, int *i, va_list *params, PrintfFormat *fmt);
+int		ft_printf(const char *s, ...);
+void	ft_printf_parse_format(const char *s, int *i, va_list *params, PrintfFormat *fmt);
 
-int	ft_putstr_formatted(char *s, PrintfFormat *fmt);
-int	ft_putchar_formatted(char c, PrintfFormat *fmt);
-int	ft_puthex_formatted(unsigned long long n, PrintfFormat *fmt, char format);
-int	ft_puthex(unsigned long long n, char format);
-int	ft_putnbr_formatted(long long n, PrintfFormat *fmt);
-int	ft_putunbr_formatted(unsigned long long n, PrintfFormat *fmt);
-int	ft_putptr_formatted(unsigned long long n, PrintfFormat *fmt);
-int ft_putoct_formatted(unsigned long long n, PrintfFormat *fmt);
+int		ft_putstr_formatted(char *s, PrintfFormat *fmt);
+int		ft_putchar_formatted(char c, PrintfFormat *fmt);
+int		ft_puthex_formatted(unsigned long long n, PrintfFormat *fmt, char format);
+int		ft_puthex(unsigned long long n, char format);
+int		ft_putnbr_formatted(long long n, PrintfFormat *fmt);
+int		ft_putunbr_formatted(unsigned long long n, PrintfFormat *fmt);
+int		ft_putptr_formatted(unsigned long long n, PrintfFormat *fmt);
+int		ft_putoct_formatted(unsigned long long n, PrintfFormat *fmt);
 
-int	ft_printf_padding(int padding, char c);
+int		ft_printf_padding(int padding, char c);
 
 #endif

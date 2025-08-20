@@ -1,6 +1,6 @@
 #include "libft.h"
 
-void reverse(void *base, size_t count, size_t size) {
+void ft_reverse(void *base, size_t count, size_t size) {
 	if (count <= 1) return;
 	
 	char *array = (char *)base;
