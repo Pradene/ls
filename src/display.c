@@ -121,13 +121,13 @@ static void print_date(const FileInfo *file) {
 	if ((file_time >= now - six_months) &&
 		(file_time <= now + six_months) &&
 		(file_tm->tm_year == now_tm->tm_year)) {
-		ft_printf("%s %2d %0*d:%0*d",
+		ft_printf("%s %2d %02d:%02d",
 			months[file_tm->tm_mon], file_tm->tm_mday,
-			2, file_tm->tm_hour, 2, file_tm->tm_min);
+			file_tm->tm_hour, file_tm->tm_min);
 	} else {
-		ft_printf("%s %2d  %0*d",
+		ft_printf("%s %2d  %04d",
 			months[file_tm->tm_mon], file_tm->tm_mday,
-			4, file_tm->tm_year + 1900);
+			file_tm->tm_year + 1900);
 	}
 }
 

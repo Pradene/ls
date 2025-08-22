@@ -68,7 +68,7 @@ int ft_printf_format(va_list *params, PrintfFormat *fmt) {
 int ft_printf(const char *format, ...) {
     va_list params;
     int printed = 0;
-    PrintfFormat fmt = ft_printf_format_create();
+    PrintfFormat fmt;
 	
     va_start(params, format);
     
@@ -78,6 +78,7 @@ int ft_printf(const char *format, ...) {
             printed += ft_putchar_formatted(format[i], NULL);
         } else {
             ++i;
+            fmt = ft_printf_format_create();
             ft_printf_parse_format(format, &i, &params, &fmt);
             printed += ft_printf_format(&params, &fmt);
         }
