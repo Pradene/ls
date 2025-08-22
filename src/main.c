@@ -24,7 +24,7 @@ int main(int ac, char **av) {
 		}
 
 		for (size_t i = 0; i < files_count; i++) {
-			if (i != 0) printf("\n");
+			if (i != 0) ft_printf("\n");
 			process_directory((char *)files.items[i]);
 		}
 	}

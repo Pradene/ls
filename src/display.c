@@ -22,26 +22,7 @@ static inline int number_len(long long n) {
 	return (count);
 }
 
-static const char *get_color_by_mode(mode_t mode) {
-	if (S_ISDIR(mode))   return BLUE;
-	if (S_ISFIFO(mode))  return CYAN;
-	if (S_ISLNK(mode))   return CYAN;
-	if (mode & S_IXUSR)  return GREEN;
-	return RESET;
-}
-
-static void get_colored_name(const FileInfo *file, char *buffer, size_t buffer_size) {
-	snprintf(
-		buffer,
-		buffer_size,
-		"%s%s%s",
-		get_color_by_mode(file->stat.st_mode),
-		file->name,
-		RESET
-	);
-}
-
-int get_terminal_width(void) {
+static int get_terminal_width(void) {
 	struct winsize w;
 	if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0 && w.ws_col > 0) {
 		return (w.ws_col);
@@ -49,7 +30,7 @@ int get_terminal_width(void) {
 	return (80);
 }
 
-int get_display_width(const char *str) {
+static int get_display_width(const char *str) {
 	int width = 0;
 	bool in_escape = false;
 	
@@ -65,31 +46,143 @@ int get_display_width(const char *str) {
 	return (width);
 }
 
+static const char *get_color_by_mode(mode_t mode) {
+	if (S_ISDIR(mode))   return BLUE;
+	if (S_ISFIFO(mode))  return CYAN;
+	if (S_ISLNK(mode))   return CYAN;
+	if (mode & S_IXUSR)  return GREEN;
+	return RESET;
+}
+
+static void print_colored_name(const FileInfo *file) {
+	ft_printf("%s%s%s", 
+		get_color_by_mode(file->stat.st_mode),
+		file->name,
+		RESET);
+}
+
+static char get_file_type_char(mode_t mode) {
+	if (S_ISDIR(mode))       return ('d');
+	if (S_ISCHR(mode))       return ('c');
+	if (S_ISBLK(mode))       return ('b');
+	if (S_ISFIFO(mode))      return ('p');
+	if (S_ISLNK(mode))       return ('l');
+	if (S_ISSOCK(mode))      return ('s');
+	return ('-');
+}
+
+static void print_permissions(FileInfo *file) {
+	mode_t mode = file->stat.st_mode;
+	
+	ft_printf("%c", get_file_type_char(mode));
+	
+	// User permissions
+	ft_printf("%c", (mode & S_IRUSR) ? 'r' : '-');
+	ft_printf("%c", (mode & S_IWUSR) ? 'w' : '-');
+	ft_printf("%c", (mode & S_IXUSR) ? 
+		((mode & S_ISUID) ? 's' : 'x') : 
+		((mode & S_ISUID) ? 'S' : '-'));
+	
+	// Group permissions
+	ft_printf("%c", (mode & S_IRGRP) ? 'r' : '-');
+	ft_printf("%c", (mode & S_IWGRP) ? 'w' : '-');
+	ft_printf("%c", (mode & S_IXGRP) ?
+		((mode & S_ISGID) ? 's' : 'x') :
+		((mode & S_ISGID) ? 'S' : '-'));
+	
+	// Other permissions
+	ft_printf("%c", (mode & S_IROTH) ? 'r' : '-');
+	ft_printf("%c", (mode & S_IWOTH) ? 'w' : '-');
+	ft_printf("%c", (mode & S_IXOTH) ?
+		((mode & S_ISVTX) ? 't' : 'x') :
+		((mode & S_ISVTX) ? 'T' : '-'));
+
+	if (listxattr(file->name, NULL, 0) > 0) {
+		ft_printf("@");
+	}
+}
+
+static void print_date(const FileInfo *file) {
+	time_t now = time(NULL);
+	time_t file_time = file->stat.st_mtime;
+	if (options & ACCESS_TIME) {
+		file_time = file->stat.st_atime;
+	}
+	struct tm *now_tm = localtime(&now);
+	struct tm *file_tm = localtime(&file_time);
+	
+	const char *months[] = {
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+	};
+	
+	const time_t six_months = 180 * 24 * 60 * 60;
+
+	if ((file_time >= now - six_months) &&
+		(file_time <= now + six_months) &&
+		(file_tm->tm_year == now_tm->tm_year)) {
+		ft_printf("%s %2d %0*d:%0*d",
+			months[file_tm->tm_mon], file_tm->tm_mday,
+			2, file_tm->tm_hour, 2, file_tm->tm_min);
+	} else {
+		ft_printf("%s %2d  %0*d",
+			months[file_tm->tm_mon], file_tm->tm_mday,
+			4, file_tm->tm_year + 1900);
+	}
+}
+
+static void print_colored_link_target(const char *link_path) {
+	const char *color = RESET;
+	struct stat st;
+	
+	if (lstat(link_path, &st) == 0) {
+		color = get_color_by_mode(st.st_mode);
+	}
+	ft_printf("%s%s%s", color, link_path, RESET);
+}
+
 static int create_display_directory(DirectoryInfo *directory, DisplayArray *display_array) {
 	display_array->items = NULL;
 	display_array->count = 0;
 	display_array->capacity = 0;
 	
-	if (ft_da_resize(display_array, directory->files.count) != 0) {
-		return -1;
+	if (!ft_da_resize(display_array, directory->files.count)) {
+		return (-1);
 	}
 	
 	for (size_t i = 0; i < directory->files.count; i++) {
 		display_array->items[i].display_name = malloc(256);
 		if (!display_array->items[i].display_name) {
-			// Clean up previously allocated names
 			for (size_t j = 0; j < i; j++) {
 				free(display_array->items[j].display_name);
 			}
 			ft_da_free(*display_array);
-			return -1;
+			return (-1);
 		}
 		
-		get_colored_name(&directory->files.items[i], display_array->items[i].display_name, 256);
+		char *buf = display_array->items[i].display_name;
+		int len = 0;
+		const char *color = get_color_by_mode(directory->files.items[i].stat.st_mode);
+		
+		while (*color && len < 255) {
+			buf[len++] = *color++;
+		}
+		
+		const char *name = directory->files.items[i].name;
+		while (*name && len < 255) {
+			buf[len++] = *name++;
+		}
+		
+		const char *reset = RESET;
+		while (*reset && len < 255) {
+			buf[len++] = *reset++;
+		}
+		buf[len] = '\0';
+		
 		display_array->items[i].width = get_display_width(display_array->items[i].display_name);
 	}
 	
-	return 0;
+	return (0);
 }
 
 static void free_display_array(DisplayArray *display_array) {
@@ -155,7 +248,7 @@ static LayoutInfo find_best_layout(DisplayArray *display_array, int term_width) 
 		}
 		
 		if (current.rows == 1) {
-			break;
+			break ;
 		}
 	}
 	
@@ -166,7 +259,7 @@ static void print_layout(DisplayArray *display_array, LayoutInfo layout) {
 	for (int row = 0; row < layout.rows; row++) {
 		for (int col = 0; col < layout.cols; col++) {
 			int index = col * layout.rows + row;
-			if (index >= (int)display_array->count) break;
+			if (index >= (int)display_array->count) break ;
 			
 			ft_printf("%s", display_array->items[index].display_name);
 			
@@ -182,101 +275,7 @@ static void print_layout(DisplayArray *display_array, LayoutInfo layout) {
 	}
 }
 
-void print_formatted(DirectoryInfo *directory) {
-	if (directory->files.count == 0) {
-		return;
-	}
-	
-	DisplayArray display_array;
-	if (create_display_directory(directory, &display_array) != 0) {
-		fprintf(stderr, "Failed to create display directory\n");
-		return;
-	}
-	
-	int term_width = get_terminal_width();
-	LayoutInfo best_layout = find_best_layout(&display_array, term_width);
-	
-	print_layout(&display_array, best_layout);
-	
-	free(best_layout.col_widths);
-	free_display_array(&display_array);
-}
-
-void format_date(const FileInfo *file, char *buffer) {
-	time_t now = time(NULL);
-	time_t file_time = file->stat.st_mtime;
-	if (options & ACCESS_TIME) {
-		file_time = file->stat.st_atime;
-	}
-	struct tm *now_tm = localtime(&now);
-	struct tm *file_tm = localtime(&file_time);
-	
-	const char *months[] = {
-		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
-		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
-	};
-	
-	const time_t six_months = 180 * 24 * 60 * 60;
-
-	if ((file_time >= now - six_months) &&
-		(file_time <= now + six_months) &&
-		(file_tm->tm_year == now_tm->tm_year)
-	) {
-		snprintf(
-			buffer, 13, "%s %2d %02d:%02d",
-			months[file_tm->tm_mon], file_tm->tm_mday,
-			file_tm->tm_hour, file_tm->tm_min
-		);
-	} else {
-		snprintf(
-			buffer, 13, "%s %2d  %04d",
-			months[file_tm->tm_mon], file_tm->tm_mday,
-			file_tm->tm_year + 1900
-		);
-	}
-}
-
-static char get_file_type_char(mode_t mode) {
-	if (S_ISDIR(mode))       return ('d');
-	if (S_ISCHR(mode))       return ('c');
-	if (S_ISBLK(mode))       return ('b');
-	if (S_ISFIFO(mode))      return ('p');
-	if (S_ISLNK(mode))       return ('l');
-	if (S_ISSOCK(mode))      return ('s');
-	return ('-');
-}
-
-void format_permissions(FileInfo *file, char *buffer) {
-	mode_t mode = file->stat.st_mode;
-	
-	buffer[0] = get_file_type_char(mode);
-	
-	// User permissions
-	buffer[1] = (mode & S_IRUSR) ? 'r' : '-';
-	buffer[2] = (mode & S_IWUSR) ? 'w' : '-';
-	buffer[3] = (mode & S_IXUSR) ? 
-		((mode & S_ISUID) ? 's' : 'x') : 
-		((mode & S_ISUID) ? 'S' : '-');
-	
-	// Group permissions
-	buffer[4] = (mode & S_IRGRP) ? 'r' : '-';
-	buffer[5] = (mode & S_IWGRP) ? 'w' : '-';
-	buffer[6] = (mode & S_IXGRP) ?
-		((mode & S_ISGID) ? 's' : 'x') :
-		((mode & S_ISGID) ? 'S' : '-');
-	
-	// Other permissions
-	buffer[7] = (mode & S_IROTH) ? 'r' : '-';
-	buffer[8] = (mode & S_IWOTH) ? 'w' : '-';
-	buffer[9] = (mode & S_IXOTH) ?
-		((mode & S_ISVTX) ? 't' : 'x') :
-		((mode & S_ISVTX) ? 'T' : '-');
-
-	buffer[10] = (listxattr(file->name, NULL, 0) > 0) ? '@' : '\0';
-	buffer[11] = '\0';
-}
-
-ColumnWidths get_list_format(DirectoryInfo *directory) {
+static ColumnWidths get_list_format(DirectoryInfo *directory) {
 	ColumnWidths widths = {0};
 
 	for (size_t i = 0; i < directory->files.count; ++i) {
@@ -306,56 +305,61 @@ static size_t get_total_blocks(DirectoryInfo *directory) {
 	return (blocks);
 }
 
+void print_formatted(DirectoryInfo *directory) {
+	if (directory->files.count == 0) {
+		return;
+	}
+	
+	DisplayArray display_array;
+	if (create_display_directory(directory, &display_array) != 0) {
+		fprintf(stderr, "Failed to create display directory\n");
+		return;
+	}
+	
+	int term_width = get_terminal_width();
+	LayoutInfo best_layout = find_best_layout(&display_array, term_width);
+	
+	print_layout(&display_array, best_layout);
+	
+	free(best_layout.col_widths);
+	free_display_array(&display_array);
+}
+
 void print_list_formatted(DirectoryInfo *directory) {
 	ft_printf("total %zu\n", get_total_blocks(directory));
 	ColumnWidths widths = get_list_format(directory);
 	
 	for (size_t i = 0; i < directory->files.count; i++) {
 		FileInfo *file = &directory->files.items[i];
-		
-		char date_buf[64], perm_buf[64], name_buf[256];
-		
-		get_colored_name(file, name_buf, sizeof(name_buf));
-		format_date(file, date_buf);
-		format_permissions(file, perm_buf);
 
 		struct passwd *pwd = getpwuid(file->stat.st_uid);
 		struct group *grp = getgrgid(file->stat.st_gid);
 		const char *username = pwd ? pwd->pw_name : "unknown";
 		const char *groupname = grp ? grp->gr_name : "unknown";
 
-		const char *link_indicator = file->link ? "->" : "";
-		const char *link_target = file->link ? file->link : "";
-		char colored_target[256] = {0};
-
+		print_permissions(file);
+		ft_printf(" ");
+		
+		ft_printf("%*zu ", widths.nlink, file->stat.st_nlink);
+		
+		if (!(options & LIST_GROUP_ONLY)) {
+			ft_printf("%*s ", widths.user, username);
+		}
+		
+		ft_printf("%*s ", widths.group, groupname);
+		
+		ft_printf("%*zu ", widths.size, file->stat.st_size);
+		
+		print_date(file);
+		ft_printf(" ");
+		
+		print_colored_name(file);
+		
 		if (file->link) {
-			const char *color = RESET;
-			
-			struct stat st;
-			if (lstat(file->link, &st) == 0) {
-				color = get_color_by_mode(st.st_mode);
-			}
-			snprintf(colored_target, sizeof(colored_target), "%s%s%s", color, file->link, RESET);
-			link_target = colored_target;
+			ft_printf(" -> ");
+			print_colored_link_target(file->link);
 		}
-
-		if (options & LIST_GROUP_ONLY) {
-			ft_printf("%s %*zu %*s %*zu %s %s %s %s\n",
-				perm_buf, widths.nlink, file->stat.st_nlink,
-				widths.group, groupname,
-				widths.size, file->stat.st_size,
-				date_buf, name_buf,
-				link_indicator, link_target
-			);
-		} else {
-			ft_printf("%s %*zu %*s %*s %*zu %s %s %s %s\n",
-				perm_buf, widths.nlink, file->stat.st_nlink,
-				widths.user, username,
-				widths.group, groupname,
-				widths.size, file->stat.st_size,
-				date_buf, name_buf,
-				link_indicator, link_target
-			);
-		}
+		
+		ft_printf("\n");
 	}
 }
